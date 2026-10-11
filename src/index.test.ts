@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ExtensionAPI, ToolDefinition } from "@earendil-works/pi-coding-agent";
 
+import type { CodemodeExecutor } from "./codemode.ts";
 import { createCodemodeSnippetsExtension, registerSnippetTools } from "./index.ts";
 import type { Snippet, SnippetLoadResult } from "./types.ts";
 
@@ -31,6 +32,12 @@ function fakePi(existing: string[]): { pi: ExtensionAPI; registered: ToolDefinit
 	return { pi, registered };
 }
 
+const EXECUTOR: CodemodeExecutor = {
+	async execute() {
+		return { content: [], details: {} };
+	},
+};
+
 describe("createCodemodeSnippetsExtension", () => {
 	it("returns a factory", () => {
 		expect(typeof createCodemodeSnippetsExtension()).toBe("function");
@@ -45,6 +52,7 @@ describe("registerSnippetTools", () => {
 			result([snippet({ name: "a" }), snippet({ name: "b", enabled: false })]),
 			new Set(),
 			10,
+			EXECUTOR,
 		);
 		expect(issues).toEqual([]);
 		expect(registered.map((tool) => tool.name)).toEqual(["a"]);
@@ -52,7 +60,7 @@ describe("registerSnippetTools", () => {
 
 	it("skips a name already registered by another tool", () => {
 		const { pi, registered } = fakePi(["bash"]);
-		const issues = registerSnippetTools(pi, result([snippet({ name: "bash" })]), new Set(), 10);
+		const issues = registerSnippetTools(pi, result([snippet({ name: "bash" })]), new Set(), 10, EXECUTOR);
 		expect(registered).toEqual([]);
 		expect(issues).toHaveLength(1);
 		expect(issues[0]?.message).toContain("already registered");
@@ -61,8 +69,15 @@ describe("registerSnippetTools", () => {
 	it("re-registers its own names on a later session start", () => {
 		const { pi, registered } = fakePi(["demo"]);
 		const registeredNames = new Set(["demo"]);
-		const issues = registerSnippetTools(pi, result([snippet()]), registeredNames, 10);
+		const issues = registerSnippetTools(pi, result([snippet()]), registeredNames, 10, EXECUTOR);
 		expect(issues).toEqual([]);
 		expect(registered.map((tool) => tool.name)).toEqual(["demo"]);
+	});
+
+	it("reports a missing executor instead of registering", () => {
+		const { pi, registered } = fakePi([]);
+		const issues = registerSnippetTools(pi, result([snippet()]), new Set(), 10, undefined);
+		expect(registered).toEqual([]);
+		expect(issues[0]?.message).toContain("codemode executor");
 	});
 });

@@ -9,12 +9,15 @@
 
 import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
 
+import type { CodemodeExecutor } from "./codemode.ts";
 import { runSnippet } from "./execute.ts";
 import type { Snippet } from "./types.ts";
 
 type SnippetToolParameters = ToolDefinition["parameters"];
 
 export interface CreateSnippetToolOptions {
+	/** The captured built-in codemode executor. */
+	readonly executor: CodemodeExecutor;
 	/** Defaults to `DEFAULT_MAX_NESTING_DEPTH`. */
 	readonly maxNestingDepth?: number;
 }
@@ -28,7 +31,7 @@ export function promptSnippetFromDescription(description: string): string {
 }
 
 /** Build the pi tool definition for one snippet. */
-export function createSnippetTool(snippet: Snippet, options: CreateSnippetToolOptions = {}): ToolDefinition {
+export function createSnippetTool(snippet: Snippet, options: CreateSnippetToolOptions): ToolDefinition {
 	return {
 		name: snippet.name,
 		label: snippet.label,
@@ -37,13 +40,15 @@ export function createSnippetTool(snippet: Snippet, options: CreateSnippetToolOp
 		...(snippet.promptGuidelines ? { promptGuidelines: [...snippet.promptGuidelines] } : {}),
 		parameters: snippet.input as unknown as SnippetToolParameters,
 		...(snippet.annotations ? { annotations: { ...snippet.annotations } } : {}),
-		execute: (toolCallId, params, signal, _onUpdate, ctx) =>
+		execute: (toolCallId, params, signal, onUpdate, ctx) =>
 			runSnippet({
 				snippet,
 				input: params,
 				toolCallId,
 				signal,
+				onUpdate,
 				ctx,
+				executor: options.executor,
 				...(options.maxNestingDepth !== undefined ? { maxNestingDepth: options.maxNestingDepth } : {}),
 			}),
 	};

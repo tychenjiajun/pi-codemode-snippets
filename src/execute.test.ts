@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { ExtensionToolContext } from "@earendil-works/pi-coding-agent";
+import type { AgentToolResult, ExtensionToolContext } from "@earendil-works/pi-coding-agent";
 
+import type { CodemodeExecutor } from "./codemode.ts";
 import { contentText, runSnippet, snippetDepth } from "./execute.ts";
 import type { Snippet } from "./types.ts";
 
@@ -18,24 +19,32 @@ function snippet(overrides: Partial<Snippet> = {}): Snippet {
 	};
 }
 
-function fakeCtx(options: {
-	readonly hasCodemode?: boolean;
-	readonly outcome?: { isError: boolean; content: { type: string; text?: string }[]; details?: unknown };
-	readonly onCall?: (name: string, args: unknown) => void;
-}): ExtensionToolContext {
-	const hasCodemode = options.hasCodemode ?? true;
-	const outcome = options.outcome ?? { isError: false, content: [{ type: "text", text: "done" }], details: {} };
+interface ExecutorCall {
+	name: string;
+	code: string;
+	toolCallId: string;
+}
+
+function fakeExecutor(options: {
+	readonly outcome?: { isError?: boolean; content: { type: string; text?: string }[]; details?: unknown; usage?: unknown };
+	readonly onCall?: (call: ExecutorCall) => void;
+}): CodemodeExecutor {
+	const outcome = options.outcome ?? { content: [{ type: "text", text: "done" }], details: {} };
 	return {
-		tools: hasCodemode ? [{ name: "codemode" }] : [{ name: "read" }],
-		async executeTool(name: string, args: unknown) {
-			options.onCall?.(name, args);
+		async execute(toolCallId, params) {
+			options.onCall?.({ name: "codemode", code: params.code, toolCallId });
 			return {
-				toolCall: { type: "toolCall", id: "x/0", name, arguments: {} },
-				result: { content: outcome.content, details: outcome.details ?? {} },
-				isError: outcome.isError,
-			};
+				content: outcome.content,
+				details: outcome.details ?? {},
+				...(outcome.isError ? { isError: true } : {}),
+				...(outcome.usage !== undefined ? { usage: outcome.usage } : {}),
+			} as AgentToolResult<unknown>;
 		},
-	} as unknown as ExtensionToolContext;
+	};
+}
+
+function fakeCtx(): ExtensionToolContext {
+	return {} as unknown as ExtensionToolContext;
 }
 
 describe("snippetDepth", () => {
@@ -53,29 +62,34 @@ describe("contentText", () => {
 });
 
 describe("runSnippet", () => {
-	it("delegates to codemode with the generated code", async () => {
-		let seen: unknown;
+	it("runs the generated code through the codemode executor", async () => {
+		let seen: ExecutorCall | undefined;
 		const result = await runSnippet({
 			snippet: snippet({ body: "return input.x;" }),
 			input: { x: 1 },
 			toolCallId: "call_1",
 			signal: undefined,
-			ctx: fakeCtx({ onCall: (_name, args) => (seen = args) }),
+			ctx: fakeCtx(),
+			executor: fakeExecutor({ onCall: (call) => (seen = call) }),
 		});
-		expect(seen).toEqual({ code: 'const input = {"x":1};\nreturn input.x;' });
+		expect(seen).toEqual({ name: "codemode", code: 'const input = {"x":1};\nreturn input.x;', toolCallId: "call_1" });
 		expect(result.details).toEqual({ snippet: "demo", path: "/user/snippets/demo.js" });
 		expect(result.content).toEqual([{ type: "text", text: "done" }]);
 	});
 
-	it("forwards codemode's nested-call details", async () => {
+	it("forwards codemode's nested-call details and usage", async () => {
 		const result = await runSnippet({
 			snippet: snippet(),
 			input: {},
 			toolCallId: "call_1",
 			signal: undefined,
-			ctx: fakeCtx({ outcome: { isError: false, content: [], details: { calls: [{ id: "a" }], fullOutputPath: "/tmp/x" } } }),
+			ctx: fakeCtx(),
+			executor: fakeExecutor({
+				outcome: { content: [], details: { calls: [{ id: "a" }], fullOutputPath: "/tmp/x" }, usage: { input: 1 } },
+			}),
 		});
 		expect(result.details).toMatchObject({ calls: [{ id: "a" }], fullOutputPath: "/tmp/x" });
+		expect(result.usage).toEqual({ input: 1 });
 	});
 
 	it("throws codemode's error text on failure", async () => {
@@ -85,21 +99,10 @@ describe("runSnippet", () => {
 				input: {},
 				toolCallId: "call_1",
 				signal: undefined,
-				ctx: fakeCtx({ outcome: { isError: true, content: [{ type: "text", text: "Script error: boom" }] } }),
+				ctx: fakeCtx(),
+				executor: fakeExecutor({ outcome: { isError: true, content: [{ type: "text", text: "Script error: boom" }] } }),
 			}),
 		).rejects.toThrow("Script error: boom");
-	});
-
-	it("fails clearly when the codemode tool is absent", async () => {
-		await expect(
-			runSnippet({
-				snippet: snippet(),
-				input: {},
-				toolCallId: "call_1",
-				signal: undefined,
-				ctx: fakeCtx({ hasCodemode: false }),
-			}),
-		).rejects.toThrow(/codemode tool is not available/);
 	});
 
 	it("caps nesting depth", async () => {
@@ -109,7 +112,8 @@ describe("runSnippet", () => {
 				input: {},
 				toolCallId: "a/1/2/3",
 				signal: undefined,
-				ctx: fakeCtx({}),
+				ctx: fakeCtx(),
+				executor: fakeExecutor({}),
 				maxNestingDepth: 3,
 			}),
 		).rejects.toThrow(/nesting depth/);

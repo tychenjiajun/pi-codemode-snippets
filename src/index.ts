@@ -27,6 +27,7 @@ import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import type { ExtensionAPI, ExtensionContext, ExtensionFactory, SessionStartEvent } from "@earendil-works/pi-coding-agent";
 
 import { registerSnippetCommands } from "./commands.ts";
+import { captureCodemodeExecutor, type CodemodeExecutor } from "./codemode.ts";
 import { DEFAULT_MAX_NESTING_DEPTH } from "./execute.ts";
 import { loadSnippets, type SnippetFs } from "./snippet.ts";
 import { createSnippetTool } from "./tool.ts";
@@ -50,6 +51,10 @@ export function createCodemodeSnippetsExtension(options: CodemodeSnippetsOptions
 		const registered = new Set<string>();
 		let last: SnippetLoadResult = EMPTY_RESULT;
 
+		// Capture the built-in codemode executor once. Nothing is registered, so the
+		// model still sees exactly one `codemode` tool and scripts cannot nest.
+		const executor = captureCodemodeExecutor(pi);
+
 		const resolveDirs = (cwd: string, trusted: boolean): SnippetDir[] => [
 			...(options.dirs ?? []),
 			{ dir: join(getAgentDir(), "snippets"), scope: "user" },
@@ -59,7 +64,7 @@ export function createCodemodeSnippetsExtension(options: CodemodeSnippetsOptions
 
 		pi.on("session_start", async (_event: SessionStartEvent, ctx: ExtensionContext) => {
 			const result = await loadSnippets(resolveDirs(ctx.cwd, ctx.isProjectTrusted()), options.fs);
-			const conflicts = registerSnippetTools(pi, result, registered, maxNestingDepth);
+			const conflicts = registerSnippetTools(pi, result, registered, maxNestingDepth, executor);
 			last = { ...result, issues: [...result.issues, ...conflicts] };
 			reportProblems(ctx, last);
 		});
@@ -81,8 +86,18 @@ export function registerSnippetTools(
 	result: SnippetLoadResult,
 	registered: Set<string>,
 	maxNestingDepth: number,
+	executor: CodemodeExecutor | undefined,
 ): SnippetIssue[] {
 	const issues: SnippetIssue[] = [];
+
+	if (!executor) {
+		issues.push({
+			path: "<codemode>",
+			message: "the built-in codemode executor is unavailable; snippets cannot be registered",
+		});
+		return issues;
+	}
+
 	const taken = new Set(pi.getAllTools().map((tool) => tool.name));
 
 	for (const snippet of result.snippets) {
@@ -97,8 +112,8 @@ export function registerSnippetTools(
 			continue;
 		}
 
-		try {
-			pi.registerTool(createSnippetTool(snippet, { maxNestingDepth }));
+			try {
+			pi.registerTool(createSnippetTool(snippet, { maxNestingDepth, executor }));
 			registered.add(snippet.name);
 			taken.add(snippet.name);
 		} catch (error) {

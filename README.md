@@ -45,9 +45,9 @@ it the same way.
 pi packages add pi-codemode-snippets
 ```
 
-The extension needs pi's built-in `codemode` tool, which ships with pi. Snippets
-call it through `ctx.executeTool`, so codemode does not need to be in your active
-tool list.
+The extension needs pi's built-in `codemode` tool, which ships with pi. It
+captures that tool's executor internally, so codemode does not need to be in
+your active tool list, and it never registers a second `codemode` tool.
 
 ## Quick start
 
@@ -170,16 +170,29 @@ const input = {…};
 <body>
 ```
 
-and hands it to pi's own `codemode` tool through `ctx.executeTool("codemode", { code })`.
+and runs it through the executor of pi's built-in `codemode` tool. The executor
+is captured once through a small `pi` facade (`captureCodemodeExecutor`), not by
+registering or calling the tool. Pi's `codemode` tool has `exposure:
+"model-only"` on purpose — *scripts must not start other scripts* — so it cannot
+be reached through `ctx.executeTool`. Capturing its `execute()` runs the
+generated script through the identical sandbox while leaving the model's tool
+set unchanged.
+
 That means a snippet gets everything a normal script gets:
 
 - the QuickJS sandbox (no filesystem, network, or timers),
 - `tools.*`, `store`/`load`, `models`, and output formatting,
-- the full `tool_call`/`tool_result` pipeline, so permission extensions see and
-  can block each nested call (nested calls carry `parentToolCallId`),
-- usage accounting for classifier and image models,
-- any installed codemode compiler such as
-  [`pi-codemode-guard`](https://github.com/tychenjiajun/pi-codemode-guard).
+- the full `tool_call`/`tool_result` pipeline for every nested tool call, so
+  permission extensions see and can block them (nested calls carry
+  `parentToolCallId`),
+- usage accounting for classifier and image models, forwarded onto the snippet
+  result.
+
+Because `codemode` itself is never registered as a callable tool, a snippet
+cannot start another codemode script through the sandbox; it composes with
+snippets instead (see below). `pi-codemode-guard` compiles model-written
+`codemode` scripts at the `tool_call` event; a snippet body does not go through
+that event, so it runs as written.
 
 ### Composition
 

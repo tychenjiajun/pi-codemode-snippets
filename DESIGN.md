@@ -30,15 +30,25 @@ The schema is enforced by pi before `execute()`: **no coercion, no
 default-filling**. Rejected: a TS-type string (needs a TS→schema parser), and
 inference from the script (unreliable).
 
-## 4. Execution: delegate to pi's `codemode` tool
+## 4. Execution: run pi's built-in codemode executor
 
-`execute()` builds `// @options:` + `const input = …;` + body and calls
-`ctx.executeTool("codemode", { code })`. This reuses the sandbox, globals,
-`store`, `models`, nested-call permissions, usage accounting, and any installed
-codemode compiler. `codemode` has `codemode` exposure, so it is callable via
-`executeTool` even when it is not in the active tool list. Rejected: a private
-sandbox via `@earendil-works/pi-codemode` (duplicates codemode), and running
-snippets as Node modules (abandons the sandbox).
+`execute()` builds `// @options:` + `const input = …;` + body and runs it
+through the executor of pi's built-in `codemode` tool. The executor is captured
+once in the factory with `captureCodemodeExecutor(pi)` — a `pi` facade that
+intercepts the `registerTool` call from `createCodemodeExtension()`, the same
+pattern `pi-codemode-guard` uses — and is invoked directly as
+`executor.execute(toolCallId, { code }, signal, onUpdate, ctx)`.
+
+This reuses the sandbox, globals, `store`, `models`, nested-call permissions,
+and usage accounting. **Corrected after a live smoke test:** an earlier version
+called `ctx.executeTool("codemode", { code })`, but pi's `codemode` tool has
+`exposure: "model-only"` with the comment *"scripts must not start other
+scripts"*, so it is not callable through `executeTool` (`_getCallableTools()`
+in `core/agent-session.ts` admits only `codemode`/`deferred`/active-`direct`
+tools). Capturing the definition keeps the model's tool set unchanged and keeps
+script nesting impossible, while running the identical implementation. Rejected:
+a private sandbox via `@earendil-works/pi-codemode` (duplicates the globals and
+output handling), and running snippets as Node modules (abandons the sandbox).
 
 ## 5. Registration: plain tools, named by the snippet name
 
@@ -71,11 +81,13 @@ a project-trust gate — nothing else. Nested tool calls already carry
 `parentToolCallId` and traverse the normal permission pipeline. A parallel
 approval gate would invite users to trust it over the real one.
 
-## 9. Guard integration: none required
+## 9. Guard integration: none, by construction
 
-Because execution goes through `executeTool("codemode")`, the generated script
-flows through the normal `tool_call` event, so `pi-codemode-guard` compiles it
-like any script when installed. No hard dependency.
+Because the built-in codemode tool is not invoked, a snippet body does not flow
+through the `codemode` `tool_call` event, so `pi-codemode-guard` does not compile
+it. Snippet bodies are user-authored and already canonical, so this is fine;
+the nested tool calls inside a script still flow through the normal event
+pipeline. No hard dependency.
 
 ## 10. Tool contract
 
@@ -100,6 +112,18 @@ A standalone npm/pi package `pi-codemode-snippets` with a default factory and
 - **`output` was dropped.** It was tentatively accepted in Q3, but codemode's
   tool result carries only text/images and `details.calls`/`fullOutputPath`, so
   a snippet tool cannot honestly populate `structuredContent`.
+- **Execution captures the codemode executor instead of calling the tool.** A
+  live smoke test against the real `pi` binary showed that
+  `ctx.executeTool("codemode", …)` fails: the tool is `model-only`. See §4.
+
+## Verification
+
+A live smoke test against `pi` 1.1.0 (isolated with `--no-extensions` plus
+`-e <extension> -e builtin:codemode`, `--approve`, `--no-session`, `--no-mcp`)
+registered a project snippet, had the model call it, ran the generated script
+through the codemode executor, executed a nested `bash` call (carrying
+`parentToolCallId`), read its `structuredContent`, and returned `live:ok` with
+`details.snippet`/`details.path`/`details.calls` intact.
 
 ## Open items
 

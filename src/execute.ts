@@ -2,15 +2,16 @@
 // Running a snippet
 // ---------------------------------------------------------------------------
 //
-// Execution is delegation. The snippet is turned back into a codemode script
-// and handed to pi's own `codemode` tool through `ctx.executeTool`, so every
-// aspect of a normal script applies: the QuickJS sandbox, `tools.*` (including
-// other snippets), `store`/`load`, `models`, nested-call permissions, usage
-// accounting, and any installed codemode compiler.
+// Execution is delegation to the captured built-in codemode executor. The
+// snippet is turned back into a codemode script and run through the identical
+// sandbox a model-written script uses: QuickJS, `tools.*` (including other
+// snippets), `store`/`load`, `models`, nested-call permissions, and usage
+// accounting.
 
-import type { AgentToolResult, ExtensionToolContext } from "@earendil-works/pi-coding-agent";
+import type { AgentToolResult, AgentToolUpdateCallback, ExtensionToolContext } from "@earendil-works/pi-coding-agent";
 
 import { buildSnippetCode } from "./codegen.ts";
+import type { CodemodeExecutor } from "./codemode.ts";
 import type { Snippet } from "./types.ts";
 
 /** Default cap on snippet→snippet recursion. */
@@ -34,7 +35,10 @@ export interface RunSnippetOptions {
 	/** Tool call id, used to derive nesting depth. */
 	readonly toolCallId: string;
 	readonly signal: AbortSignal | undefined;
+	/** Streaming callback, forwarded to the codemode executor. */
+	readonly onUpdate?: AgentToolUpdateCallback<unknown>;
 	readonly ctx: ExtensionToolContext;
+	readonly executor: CodemodeExecutor;
 	readonly maxNestingDepth?: number;
 }
 
@@ -56,19 +60,13 @@ export function contentText(content: readonly { type?: string; text?: string }[]
 }
 
 /**
- * Run one snippet and map the codemode outcome onto a tool result. A failed
+ * Run one snippet and map the codemode result onto a tool result. A failed
  * script throws, carrying codemode's error text (which includes partial output)
  * so pi records a failed tool result.
  */
 export async function runSnippet(options: RunSnippetOptions): Promise<AgentToolResult<SnippetToolDetails>> {
-	const { snippet, ctx } = options;
+	const { snippet, ctx, executor } = options;
 	const maxDepth = options.maxNestingDepth ?? DEFAULT_MAX_NESTING_DEPTH;
-
-	if (!ctx.tools.some((tool) => tool.name === "codemode")) {
-		throw new Error(
-			`Snippet "${snippet.name}" cannot run: the codemode tool is not available. Enable the built-in codemode extension.`,
-		);
-	}
 
 	const depth = snippetDepth(options.toolCallId);
 	if (depth > maxDepth) {
@@ -79,21 +77,22 @@ export async function runSnippet(options: RunSnippetOptions): Promise<AgentToolR
 	}
 
 	const code = buildSnippetCode(snippet, options.input);
-	const outcome = await ctx.executeTool("codemode", { code }, { signal: options.signal });
+	const result = await executor.execute(options.toolCallId, { code }, options.signal, options.onUpdate, ctx);
 
-	if (outcome.isError) {
-		const text = contentText(outcome.result.content);
+	if (result.isError) {
+		const text = contentText(result.content as readonly { type?: string; text?: string }[]);
 		throw new Error(text === "" ? `Snippet "${snippet.name}" failed.` : text);
 	}
 
-	const details = outcome.result.details as { calls?: unknown; fullOutputPath?: string } | undefined;
+	const details = result.details as { calls?: unknown; fullOutputPath?: string } | undefined;
 	return {
-		content: outcome.result.content,
+		content: result.content,
 		details: {
 			snippet: snippet.name,
 			path: snippet.path,
 			...(details?.calls !== undefined ? { calls: details.calls } : {}),
 			...(details?.fullOutputPath !== undefined ? { fullOutputPath: details.fullOutputPath } : {}),
 		},
+		...(result.usage !== undefined ? { usage: result.usage } : {}),
 	};
 }

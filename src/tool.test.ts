@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ExtensionToolContext } from "@earendil-works/pi-coding-agent";
 
+import type { CodemodeExecutor } from "./codemode.ts";
 import { createSnippetTool, promptSnippetFromDescription } from "./tool.ts";
 import type { Snippet } from "./types.ts";
 
@@ -18,18 +19,15 @@ function snippet(overrides: Partial<Snippet> = {}): Snippet {
 	};
 }
 
-function fakeCtx(): ExtensionToolContext {
+function fakeExecutor(): CodemodeExecutor {
 	return {
-		tools: [{ name: "codemode" }],
-		async executeTool(_name: string, args: unknown) {
-			return {
-				toolCall: { type: "toolCall", id: "x/0", name: "codemode", arguments: args },
-				result: { content: [{ type: "text", text: "ok" }], details: {} },
-				isError: false,
-			};
+		async execute(_toolCallId, _params, _signal, _onUpdate, _ctx) {
+			return { content: [{ type: "text", text: "ok" }], details: {} };
 		},
-	} as unknown as ExtensionToolContext;
+	};
 }
+
+const CTX = {} as unknown as ExtensionToolContext;
 
 describe("promptSnippetFromDescription", () => {
 	it("takes the first sentence", () => {
@@ -58,6 +56,7 @@ describe("createSnippetTool", () => {
 				annotations: { readOnlyHint: true },
 				promptGuidelines: ["Rule one."],
 			}),
+			{ executor: fakeExecutor() },
 		);
 		expect(tool.name).toBe("demo");
 		expect(tool.label).toBe("Demo Label");
@@ -68,9 +67,9 @@ describe("createSnippetTool", () => {
 		expect(tool.promptGuidelines).toEqual(["Rule one."]);
 	});
 
-	it("runs the snippet through codemode when executed", async () => {
-		const tool = createSnippetTool(snippet({ body: "return input.a;" }));
-		const result = await tool.execute("call_1", { a: 1 }, undefined, undefined, fakeCtx());
+	it("runs the snippet when executed", async () => {
+		const tool = createSnippetTool(snippet({ body: "return input.a;" }), { executor: fakeExecutor() });
+		const result = await tool.execute("call_1", { a: 1 }, undefined, undefined, CTX);
 		expect(result.content).toEqual([{ type: "text", text: "ok" }]);
 		expect(result.details).toEqual({ snippet: "demo", path: "/user/snippets/demo.js" });
 	});
