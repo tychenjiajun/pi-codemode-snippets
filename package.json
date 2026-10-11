@@ -1,0 +1,62 @@
+{
+  "name": "pi-codemode-snippets",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Pi extension that turns user-authored `.js` codemode snippets (a `// @snippet:` pragma plus a sandbox script) into first-class pi tools the model, other tools, and codemode scripts can call.",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./pragma": "./src/pragma.ts",
+    "./snippet": "./src/snippet.ts",
+    "./codegen": "./src/codegen.ts",
+    "./execute": "./src/execute.ts",
+    "./tool": "./src/tool.ts",
+    "./commands": "./src/commands.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "codemode",
+    "snippets",
+    "tools",
+    "llm",
+    "ai-agent",
+    "agentic-coding",
+    "tool-calling",
+    "quickjs",
+    "sandbox"
+  ],
+  "author": "Jiajun Chen <tychenjiajun@live.cn>",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "src/**/*.ts",
+    "!src/**/*.test.ts",
+    "examples/**",
+    "README.md",
+    "DESIGN.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.99.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  },
+  "packageManager": "pnpm@12.6.0"
+}

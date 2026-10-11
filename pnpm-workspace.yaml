@@ -1,0 +1,23 @@
+allowBuilds:
+  '@google/genai': false
+  esbuild: true
+  protobufjs: false
+  tree-sitter-bash: false
+minimumReleaseAgeExclude:
+  - '@vitest/expect@5.0.0'
+  - '@vitest/mocker@5.0.0'
+  - '@vitest/pretty-format@5.0.0'
+  - '@vitest/runner@5.0.0'
+  - '@vitest/snapshot@5.0.0'
+  - '@vitest/spy@5.0.0'
+  - '@vitest/utils@5.0.0'
+  - vitest@5.0.0
+  - '@earendil-works/chord@0.99.2'
+  - '@earendil-works/pi-agent-core@0.99.2'
+  - '@earendil-works/pi-ai@0.99.2'
+  - '@earendil-works/pi-codemode@0.99.2'
+  - '@earendil-works/pi-coding-agent@0.99.2'
+  - '@earendil-works/pi-mcp@0.99.2'
+  - '@earendil-works/pi-telemetry@0.99.2'
+  - '@earendil-works/pi-tui@0.99.2'
+  - acorn@8.15.0

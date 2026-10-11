@@ -1,0 +1,219 @@
+# pi-codemode-snippets
+
+[![pi extension](https://img.shields.io/badge/pi-extension-7c3aed.svg)](https://pi.dev/docs/latest/extensions)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
+**pi-codemode-snippets** turns user-authored JavaScript files into first-class
+[pi](https://github.com/earendil-works/pi) tools. Each file is a saved
+[`codemode`](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/codemode.md)
+script plus a small metadata comment, so a script you already ran and liked
+becomes a named tool the model can call, other tools can call, and other
+snippets can compose.
+
+It is the "keep the scripts worth keeping" half of Code Mode. Code Mode gives
+the model a sandbox; this extension gives you a durable, reviewable, versioned
+library of the scripts that proved useful.
+
+```js
+// ~/.pi/agent/snippets/list_open_prs.js
+// @snippet: {
+//   "description": "List open pull requests for a GitHub repository, newest first.",
+//   "input": {
+//     "type": "object",
+//     "properties": {
+//       "repo": { "type": "string" },
+//       "limit": { "type": "integer", "minimum": 1, "maximum": 100 }
+//     },
+//     "required": ["repo"]
+//   },
+//   "annotations": { "readOnlyHint": true, "openWorldHint": true }
+// }
+const limit = input.limit ?? 20;
+const result = await tools.bash({
+  command: `gh pr list -R ${input.repo} --state open --limit ${limit} --json number,title`,
+});
+return JSON.parse(result.output);
+```
+
+The model now sees a `list_open_prs` tool, a codemode script can call
+`await tools.list_open_prs({ repo: "acme/web" })`, and another snippet can reuse
+it the same way.
+
+## Install
+
+```bash
+pi packages add pi-codemode-snippets
+```
+
+The extension needs pi's built-in `codemode` tool, which ships with pi. Snippets
+call it through `ctx.executeTool`, so codemode does not need to be in your active
+tool list.
+
+## Quick start
+
+1. Create the user snippet directory and add a file:
+
+   ```bash
+   mkdir -p ~/.pi/agent/snippets
+   $EDITOR ~/.pi/agent/snippets/list_open_prs.js   # paste the example above
+   ```
+
+2. In pi, run `/reload` (pi re-runs extensions and re-scans snippet directories).
+
+3. Check it loaded with `/snippet list`, then just ask the model to use it, or
+   call it from a codemode script.
+
+Snippets are discovered at session start. `/reload` is the way to pick up an
+added, edited, or deleted file — there is no filesystem watcher and no
+unregister API, so a full reload is what keeps the tool set authoritative.
+
+## File format
+
+One file per snippet, flat directory, `*.js` only. A file is a `@snippet` pragma
+comment followed by a codemode script body.
+
+```
+// @snippet: { … JSON … }          // one line
+/* @snippet: { … JSON … } */       // one block
+// @snippet: {                     // several // lines
+//   "description": "…"
+// }
+```
+
+Everything after the pragma is the body. The body runs as the body of an async
+function in the codemode sandbox, so top-level `await` and `return` work, and
+these globals are available:
+
+| Global | Purpose |
+|---|---|
+| `input` | The validated tool arguments (a single object). |
+| `tools.<name>(args)` | Call any tool, including other snippets. |
+| `text(value)`, `image(value)`, `console.log(...)`, `exit()` | Add output. |
+| `return value` | Add the returned value like `text()`. |
+| `store(key, value)` / `load(key)` | Persist small JSON values across codemode calls. |
+| `ALL_TOOLS`, `searchTools`, `describeTool`, `describeNamespace` | Discover other tools. |
+| `models` | List and run classifier and image models. |
+
+### Pragma fields
+
+| Field | Required | Default | Meaning |
+|---|---|---|---|
+| `description` | **yes** | — | Model-facing description. Files without it are skipped. |
+| `name` | no | filename stem | Tool name. Must match `[A-Za-z_][A-Za-z0-9_-]{0,63}`. |
+| `label` | no | `name` | UI label. |
+| `input` | no | `{"type":"object","properties":{}}` | JSON Schema of the argument object. |
+| `enabled` | no | `true` | `false` keeps the file but does not register the tool. |
+| `timeoutMs` | no | unset | Merged into the generated `@options.timeout_ms`. |
+| `maxOutputTokens` | no | unset | Merged into the generated `@options.max_output_tokens`. |
+| `annotations` | no | unset | `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`. |
+| `promptGuidelines` | no | unset | Extra guideline bullets shown with the tool. |
+
+### Inputs
+
+A snippet has one input: a single JSON object validated against the `input`
+schema before the body runs. Wrong type, missing required field, or a failed
+enum rejects the call; there is **no coercion and no default-filling**, so apply
+defaults in the body (`input.limit ?? 20`). Every caller passes a different
+object:
+
+| Caller | Example |
+|---|---|
+| The model | `list_open_prs({ repo: "acme/web" })` |
+| Another snippet / codemode script | `await tools.list_open_prs({ repo, limit: 5 })` |
+| Another extension | `ctx.executeTool("list_open_prs", { repo })` |
+
+`input` is a reserved name; do not redeclare it in the body.
+
+### Options
+
+A body may begin with pi's own options line. The extension merges it with the
+pragma limits and re-emits a single leading options line. The body wins.
+
+```js
+// @snippet: {"description":"…","timeoutMs":10000}
+// @options: {"max_output_tokens": 500}
+const out = await tools.bash({ command: "git log --oneline -20" });
+```
+
+## Directories and precedence
+
+| Scope | Directory |
+|---|---|
+| user | `~/.pi/agent/snippets/` |
+| setting | every path in the `snippets` settings array (`~` and relative paths allowed) |
+| project | `<cwd>/.pi/snippets/` — only when the project is trusted |
+
+When two files share a name, the higher-precedence one wins: project overrides
+setting overrides user, and among setting directories later entries override
+earlier ones. The losing file is reported by `/snippet list`.
+
+## Commands
+
+| Command | Purpose |
+|---|---|
+| `/snippet list` | Loaded snippets with scope, path, disabled state, shadowing, problems. |
+| `/snippet show <name>` | A snippet's pragma summary and body. |
+| `/snippet validate` | Re-scan the directories and report every problem. |
+| `/snippet preview <name> [json]` | Print the exact codemode script the tool would run. |
+
+Commands run in the command context, which has no `executeTool()`, so there is
+no `/snippet run`. Running a snippet is an ordinary tool call: ask the model, or
+call it from a codemode script. `preview` is the deterministic dry run.
+
+## How a snippet runs
+
+Running a snippet is delegation. The extension rebuilds the codemode script:
+
+```js
+// @options: {…}
+const input = {…};
+<body>
+```
+
+and hands it to pi's own `codemode` tool through `ctx.executeTool("codemode", { code })`.
+That means a snippet gets everything a normal script gets:
+
+- the QuickJS sandbox (no filesystem, network, or timers),
+- `tools.*`, `store`/`load`, `models`, and output formatting,
+- the full `tool_call`/`tool_result` pipeline, so permission extensions see and
+  can block each nested call (nested calls carry `parentToolCallId`),
+- usage accounting for classifier and image models,
+- any installed codemode compiler such as
+  [`pi-codemode-guard`](https://github.com/tychenjiajun/pi-codemode-guard).
+
+### Composition
+
+Because every snippet is a registered tool, one snippet calls another with
+`tools.<name>({…})`. Recursion is capped (default depth 10) to stop a snippet
+that calls itself. Snippets share the session `codemode` store; prefix keys,
+e.g. `snippet:<name>:<key>`, to avoid collisions.
+
+## Safety
+
+Snippet source is trusted, user-authored code, gated by project trust. The
+extension is not a security boundary: the codemode sandbox and whatever
+permission extensions you run are. A snippet has no ambient capability; each
+real effect is a tool call that traverses the normal permission pipeline. The
+extension adds only a recursion cap, optional per-snippet timeouts, and
+annotation passthrough.
+
+## Non-goals
+
+Not in this version: promoting a script from a live model run into a snippet,
+per-snippet exposure control, per-snippet tool allowlists, output schemas,
+a filesystem watcher, `/snippet new`/`/snippet edit`, and recursive directories.
+
+## Development
+
+```bash
+pnpm install
+pnpm test
+pnpm typecheck
+```
+
+`examples/snippets/` holds a runnable starter set. Copy it to
+`~/.pi/agent/snippets/` to try the extension.
+
+## License
+
+MIT
