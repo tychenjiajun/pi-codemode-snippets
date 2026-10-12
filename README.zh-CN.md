@@ -8,6 +8,7 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![npm](https://img.shields.io/npm/v/pi-codemode-snippets.svg)](https://www.npmjs.com/package/pi-codemode-snippets)
+[![Release](https://img.shields.io/github/v/release/tychenjiajun/pi-codemode-snippets)](https://github.com/tychenjiajun/pi-codemode-snippets/releases/latest)
 [![pi extension](https://img.shields.io/badge/pi-extension-7c3aed.svg)](https://pi.dev/docs/latest/extensions)
 [![pi package](https://img.shields.io/badge/pi-package-7c3aed.svg)](https://pi.dev/docs/latest/packages)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](./tsconfig.json)
