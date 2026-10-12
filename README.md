@@ -216,6 +216,27 @@ Not in this version: promoting a script from a live model run into a snippet,
 per-snippet exposure control, per-snippet tool allowlists, output schemas,
 a filesystem watcher, `/snippet new`/`/snippet edit`, and recursive directories.
 
+## Bundled skill
+
+The package ships the `snippet-authoring` skill (per the [package
+layout](https://pi.dev/docs/latest/packages#create-a-package)): a `skills/`
+directory declared in the `pi` manifest of `package.json`, so installing the
+extension also teaches the model how to author new snippets for it. When the
+user asks to "write a snippet" or pastes a codemode script to promote, the
+skill covers the file format, pragma, input schema, and sandbox rules, and
+gates every file it writes with the bundled compiler check:
+
+```bash
+node skills/snippet-authoring/scripts/check.mjs <file.js   # or a directory
+```
+
+The check script is dependency-free: it validates the `@snippet` JSON and
+fields, enforces the name pattern and input schema (including that the body
+only reads declared fields), and compiles the body with `node:vm` using
+codemode's own `(async (tools, console) => {…})` wrapper — catching syntax
+errors (with the offending file line) and redeclarations of the reserved
+`input` binding, without running pi.
+
 ## Development
 
 ```bash
