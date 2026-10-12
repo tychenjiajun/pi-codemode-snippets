@@ -150,7 +150,7 @@ these globals are available:
 | Field | Required | Default | Meaning |
 |---|---|---|---|
 | `description` | **yes** | — | Model-facing description. Files without it are skipped. |
-| `name` | no | filename stem | Tool name. Must match `[A-Za-z_][A-Za-z0-9_-]{0,63}`. |
+| `name` | no | filename stem | Tool name. Must match `[A-Za-z_][A-Za-z0-9_-]{0,63}`. `codemode` and `mcp__…` are reserved. |
 | `label` | no | `name` | UI label. |
 | `input` | no | `{"type":"object","properties":{}}` | JSON Schema of the argument object. |
 | `enabled` | no | `true` | `false` keeps the file but does not register the tool. |
@@ -197,6 +197,13 @@ const out = await tools.bash({ command: "git log --oneline -20" });
 When two files share a name, the higher-precedence one wins: project overrides
 setting overrides user, and among setting directories later entries override
 earlier ones. The losing file is reported by `/snippet list`.
+
+When a name is already taken by another tool — a built-in such as `bash` or
+`read`, or another extension's tool — the snippet is skipped at registration
+and the conflict is reported by `/snippet validate`. Two names are rejected
+outright, before any tool list exists: `codemode` (it would shadow the tool
+snippets run through) and `mcp__…` (MCP tools connect after snippets load, so
+the runtime check could not see them).
 
 ## Commands
 
@@ -336,6 +343,8 @@ API). A `snippets.watch` setting is an open item.
 
 Only `description` (model-facing) and the optional `input` JSON Schema. Omit
 `name` and it defaults to the filename stem (`[A-Za-z_][A-Za-z0-9_-]{0,63}`).
+`codemode` and `mcp__…` are reserved; a name another tool already holds is
+skipped and reported by `/snippet validate`.
 Without `description` the file is skipped, never errored on.
 
 ## Built on pi

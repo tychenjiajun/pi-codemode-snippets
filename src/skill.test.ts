@@ -164,6 +164,20 @@ describe("check.mjs — broken @snippet configuration", () => {
 		expect(result.output).toContain('"my.snippet"');
 	});
 
+	it.each(["codemode.js", "mcp__github__search.js"])("rejects the reserved file name %s", (file) => {
+		const result = checkSource(file, `${validPragma}\nreturn 1;\n`);
+		expect(result.status).toBe(1);
+		expect(result.output).toContain("is reserved");
+	});
+
+	it("agrees with the real loader on reserved names", () => {
+		const source = `// @snippet: {"description":"x","name":"codemode"}\nreturn 1;\n`;
+		const built = buildSnippet({ source, path: "/tmp/codemode.js", scope: "user" });
+		expect(built.ok).toBe(false);
+		if (built.ok) return;
+		expect(checkSource("codemode.js", source).output).toContain(built.message);
+	});
+
 	it("rejects an empty body", () => {
 		const result = checkSource("empty.js", `// @snippet: {"description":"x"}\n\n`);
 		expect(result.status).toBe(1);

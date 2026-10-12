@@ -135,7 +135,7 @@ pi packages add pi-codemode-snippets
 | Field | Required | Default | Meaning |
 |---|---|---|---|
 | `description` | **yes** | — | 面向模型的描述。无此字段的文件会被跳过。 |
-| `name` | no | 文件名 stem | 工具名。需匹配 `[A-Za-z_][A-Za-z0-9_-]{0,63}`。 |
+| `name` | no | 文件名 stem | 工具名。需匹配 `[A-Za-z_][A-Za-z0-9_-]{0,63}`。`codemode` 与 `mcp__…` 为保留名。 |
 | `label` | no | `name` | UI 标签。 |
 | `input` | no | `{"type":"object","properties":{}}` | 参数对象的 JSON Schema。 |
 | `enabled` | no | `true` | `false` 保留文件但不注册工具。 |
@@ -179,6 +179,11 @@ const out = await tools.bash({ command: "git log --oneline -20" });
 
 多个文件同名时，高优先级的胜出：project 覆盖 setting 覆盖 user；
 在 setting 目录中，靠后的条目覆盖靠前的条目。 losers 会被 `/snippet list` 所报告。
+
+若名字已被其他工具占用（内置工具如 `bash`、`read`，或其他扩展的工具），
+代码段在注册时被跳过，冲突由 `/snippet validate` 报告。另有两个名字在加载阶段
+就被直接拒绝：`codemode`（会遮盖代码段赖以运行的工具）与 `mcp__…`
+（MCP 工具在代码段之后才注册，运行时检查看不到它们）。
 
 ## 命令
 
@@ -302,7 +307,8 @@ node skills/snippet-authoring/scripts/check.mjs <file.js   # 或一个目录
 
 仅 `description`（面向模型）与可选的 `input` JSON Schema。
 省略 `name` 时默认为文件名 stem（需匹配 `[A-Za-z_][A-Za-z0-9_-]{0,63}`）。
-缺少 `description` 的文件会被跳过，而不是报错。
+`codemode` 与 `mcp__…` 为保留名；已被其他工具占用的名字会被跳过并由
+`/snippet validate` 报告。缺少 `description` 的文件会被跳过，而不是报错。
 
 ## Built on pi
 

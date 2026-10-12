@@ -27,7 +27,7 @@ limits, and the body wins on conflict.
 | Field | Required | Default | Meaning |
 |---|---|---|---|
 | `description` | **yes** | — | Model-facing description. Files without it are skipped. |
-| `name` | no | filename stem | Tool name, must match `[A-Za-z_][A-Za-z0-9_-]{0,63}`. |
+| `name` | no | filename stem | Tool name, must match `[A-Za-z_][A-Za-z0-9_-]{0,63}`; `codemode` and `mcp__…` are reserved. |
 | `label` | no | `name` | UI label. |
 | `input` | no | `{"type":"object","properties":{}}` | JSON Schema of the single object argument. |
 | `enabled` | no | `true` | `false` keeps the file but registers no tool. |
@@ -106,6 +106,7 @@ load at session start; `/reload` re-scans.
 | `needs a non-empty "description"` | Missing/typo'd description | Add the model-facing summary |
 | `unknown @snippet field "…"` | Typo'd field name | Use the exact field names from the table |
 | `must match /^[A-Za-z_]/…/` | Bad name or filename stem (dots etc.) | Rename file or set `name` |
+| `is reserved` | Name is `codemode` or starts with `mcp__` | Rename file or set another `name` |
 | `syntax error at line N` | Body doesn't compile | Fix the line shown — N maps to your file |
 | `Identifier 'input' has already been declared` | Body redeclares `input` | Remove the declaration; `input` is injected |
 | `the body reads input.x but … does not declare "x"` | Schema missing a field the body uses | Add it to `input.properties` |

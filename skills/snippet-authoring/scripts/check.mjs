@@ -10,7 +10,8 @@
 //   1. file name ends in `.js` (the extension only scans `*.js`);
 //   2. the leading `// @snippet: {…}` pragma parses as strict JSON;
 //   3. every pragma field has the right shape (see src/pragma.ts);
-//   4. the resolved tool name matches `[A-Za-z_][A-Za-z0-9_-]{0,63}`;
+//   4. the resolved tool name matches `[A-Za-z_][A-Za-z0-9_-]{0,63}` and is
+//      not reserved (`codemode`, `mcp__…` — see reservedNameProblem below);
 //   5. the body is non-empty and its leading `@options:` line (if any) is valid;
 //   6. the `input` JSON Schema is an object schema that declares every field
 //      the body actually reads (there is no coercion or default-filling);
@@ -35,6 +36,24 @@ import vm from "node:vm";
 
 const PRAGMA_TAG = "@snippet:";
 const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
+
+// Mirrors reservedNameProblem() in src/snippet.ts; src/skill.test.ts keeps the two in lockstep.
+function reservedNameProblem(name) {
+	const lower = name.toLowerCase();
+	if (lower === "codemode") {
+		return (
+			`snippet name "${name}" is reserved: it would shadow the built-in codemode tool ` +
+			"that runs snippet bodies — rename the file or set another `name`"
+		);
+	}
+	if (lower.startsWith("mcp__")) {
+		return (
+			`snippet name "${name}" is reserved: names starting with "mcp__" belong to MCP tools, ` +
+			"which register after snippets load — the collision would be silent"
+		);
+	}
+	return undefined;
+}
 const PRAGMA_KEYS = [
 	"name",
 	"description",
@@ -394,6 +413,9 @@ export function checkSnippetFile(path) {
 						'(letters, digits, "_" and "-", starting with a letter or "_") — ' +
 						"rename the file or set a valid `name` in the pragma",
 				);
+			} else {
+				const reserved = reservedNameProblem(tool);
+				if (reserved !== undefined) problems.push(reserved);
 			}
 		}
 	}

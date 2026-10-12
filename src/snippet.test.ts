@@ -69,6 +69,31 @@ describe("buildSnippet", () => {
 		expect(result.message).toContain("snippet name");
 	});
 
+	it.each(["codemode", "CoDeMoDe", "mcp__github__search", "MCP__x__y"])(
+		"rejects the reserved name %s",
+		(name) => {
+			const result = buildSnippet({
+				source: `// @snippet: {"description":"Demo.","name":"${name}"}\nreturn 1;`,
+				path: "/user/snippets/demo.js",
+				scope: "user",
+			});
+			expect(result.ok).toBe(false);
+			if (result.ok) return;
+			expect(result.message).toContain("is reserved");
+		},
+	);
+
+	it("rejects a reserved filename stem even without a pragma name", () => {
+		const result = buildSnippet({
+			source: '// @snippet: {"description":"Demo."}\nreturn 1;',
+			path: "/user/snippets/codemode.js",
+			scope: "user",
+		});
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.message).toContain("is reserved");
+	});
+
 	it("rejects an empty body", () => {
 		const result = buildSnippet({
 			source: '// @snippet: {"description":"Demo."}\n',

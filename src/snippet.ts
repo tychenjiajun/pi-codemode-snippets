@@ -31,6 +31,34 @@ export const defaultSnippetFs: SnippetFs = {
 };
 
 const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
+
+/**
+ * Why a name no snippet may take, or `undefined` when the name is free.
+ *
+ * The registration path also skips any name another tool already holds (see
+ * `registerSnippetTools`), but that check reads a snapshot of the tool
+ * registry taken at session start. These two rules cover what the snapshot
+ * cannot see: a disabled `codemode` tool is absent from it, and `mcp__…`
+ * tools only register once their server connects, after snippets load — a
+ * collision there would be silent.
+ */
+export function reservedNameProblem(name: string): string | undefined {
+	const lower = name.toLowerCase();
+	if (lower === "codemode") {
+		return (
+			`snippet name "${name}" is reserved: it would shadow the built-in codemode tool ` +
+			"that runs snippet bodies — rename the file or set another `name`"
+		);
+	}
+	if (lower.startsWith("mcp__")) {
+		return (
+			`snippet name "${name}" is reserved: names starting with "mcp__" belong to MCP tools, ` +
+			"which register after snippets load — the collision would be silent"
+		);
+	}
+	return undefined;
+}
+
 const SCOPE_RANK: Record<SnippetScope, number> = { user: 0, setting: 1, project: 2 };
 
 /** The snippet name a file provides: the pragma `name`, else the filename stem. */
@@ -58,6 +86,8 @@ export function buildSnippet(options: {
 			message: `snippet name "${name}" must match ${NAME_PATTERN} (letters, digits, "_" and "-", starting with a letter or "_")`,
 		};
 	}
+	const reserved = reservedNameProblem(name);
+	if (reserved !== undefined) return { ok: false, message: reserved };
 
 	const body = parsed.body.trim();
 	if (body === "") return { ok: false, message: "the snippet has an empty body" };

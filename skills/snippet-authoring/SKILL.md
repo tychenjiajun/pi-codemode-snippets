@@ -66,6 +66,11 @@ return JSON.parse(result.output);
 - `name`: defaults to the filename stem; must match
   `[A-Za-z_][A-Za-z0-9_-]{0,63}`. Filename `list-open-prs.js` is fine;
   `list.open.js` is not (stem contains a dot) unless the pragma sets `name`.
+  Two names are reserved: `codemode` (it would shadow the tool snippets run
+  through) and anything starting with `mcp__` (MCP tools register after
+  snippets load, so the collision would be silent). A name already held by a
+  built-in tool such as `bash` loads but registers no tool — the checker
+  cannot see that case; `/snippet validate` reports it.
 - Unknown pragma fields are **errors** — a typo like `"desciption"` would
   otherwise be silently ignored.
 - `annotations` are honesty metadata, not decoration:
