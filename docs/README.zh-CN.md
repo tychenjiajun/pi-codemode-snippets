@@ -1,18 +1,18 @@
 # pi-codemode-snippets
 
-[English](./README.md) | 简体中文
+[English](../README.md) | 简体中文
 
 <p align="center">
-  <img src="./assets/preview.svg" alt="pi-codemode-snippets 将用户编写的 .js codemode 代码段文件转化为可命名、可组合的 pi 工具，并在 QuickJS 沙箱中运行" width="880">
+  <img src="../assets/preview.svg" alt="pi-codemode-snippets 将用户编写的 .js codemode 代码段文件转化为可命名、可组合的 pi 工具，并在 QuickJS 沙箱中运行" width="880">
 </p>
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 [![npm](https://img.shields.io/npm/v/pi-codemode-snippets.svg)](https://www.npmjs.com/package/pi-codemode-snippets)
 [![Release](https://img.shields.io/github/v/release/tychenjiajun/pi-codemode-snippets)](https://github.com/tychenjiajun/pi-codemode-snippets/releases/latest)
 [![pi extension](https://img.shields.io/badge/pi-extension-7c3aed.svg)](https://pi.dev/docs/latest/extensions)
 [![pi package](https://img.shields.io/badge/pi-package-7c3aed.svg)](https://pi.dev/docs/latest/packages)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](./tsconfig.json)
-[![Tests](https://img.shields.io/badge/tests-99%20passing-brightgreen.svg)](./package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](../tsconfig.json)
+[![Tests](https://img.shields.io/badge/tests-99%20passing-brightgreen.svg)](../package.json)
 [![pnpm](https://img.shields.io/badge/package%20manager-pnpm-f69220.svg)](https://pnpm.io)
 
 **pi-codemode-snippets** 把用户编写的 JavaScript 文件变成一等的
@@ -265,7 +265,7 @@ node skills/snippet-authoring/scripts/check.mjs <file.js   # 或一个目录
 `pi-codemode-guard` *修补*模型编写的 codemode（在 `tool_call` 事件发生时）。
 `pi-codemode-snippets` *注册*用户编写的 codemode 文件为命名工具，
 并且故意不修改代码段正文 —— 它的正文本身就是规范的 JavaScript（见
-[design note on guard integration](./DESIGN.md)）。二者协同：
+[design note on guard integration](../DESIGN.md)）。二者协同：
 手动编写代码段，用 guard 清洗模型当场吐出来的脚本。
 
 **代码段安全吗？**

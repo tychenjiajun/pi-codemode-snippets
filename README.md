@@ -1,6 +1,6 @@
 # pi-codemode-snippets
 
-English | [简体中文](./README.zh-CN.md)
+English | [简体中文](./docs/README.zh-CN.md)
 
 <p align="center">
   <img src="./assets/preview.svg" alt="pi-codemode-snippets turns a user-authored .js codemode snippet file into a named, composable pi tool that runs in the QuickJS sandbox" width="880">
