@@ -70,14 +70,15 @@
   <circle cx="86" cy="235" r="5.5" fill="#ff5f57"/>
   <circle cx="106" cy="235" r="5.5" fill="#febc2e"/>
   <circle cx="126" cy="235" r="5.5" fill="#28c840"/>
-  <text x="150" y="240" class="code" font-size="13.5" fill="#6f6a85">snippets/gh-pr-list.js</text>
+  <text x="150" y="240" class="code" font-size="13.5" fill="#6f6a85">~/.pi/agent/snippets/list_open_prs.js</text>
 
-  <text x="86" y="288" class="code" xml:space="preserve"><tspan class="cm">// </tspan><tspan class="kw" font-weight="700">@snippet:</tspan><tspan class="pun"> { </tspan><tspan class="key">"name"</tspan><tspan class="pun">: </tspan><tspan class="str">"gh-pr-list"</tspan><tspan class="pun">,</tspan></text>
-  <text x="86" y="314" class="code" xml:space="preserve"><tspan class="cm">//             </tspan><tspan class="key">"input"</tspan><tspan class="pun">: { </tspan><tspan class="key">"q"</tspan><tspan class="pun">: </tspan><tspan class="str">"string"</tspan><tspan class="pun"> } }</tspan></text>
-  <text x="86" y="340" class="code" xml:space="preserve"><tspan class="kw">export const</tspan><tspan class="pl"> tool = </tspan><tspan class="kw">async</tspan><tspan class="pun"> ({ q }) => {</tspan></text>
-  <text x="105" y="366" class="code" xml:space="preserve"><tspan class="kw">const</tspan><tspan class="pl"> { data } = </tspan><tspan class="kw">await</tspan><tspan class="pl"> tools.</tspan><tspan class="fn">gh</tspan><tspan class="pun">(</tspan><tspan class="str">`pr list --repo ${q}`</tspan><tspan class="pun">)</tspan></text>
-  <text x="105" y="392" class="code" xml:space="preserve"><tspan class="kw">return</tspan><tspan class="pl"> data.</tspan><tspan class="fn">map</tspan><tspan class="pun">(p => </tspan><tspan class="str">`#${p.number} ${p.title}`</tspan><tspan class="pun">)</tspan></text>
-  <text x="86" y="418" class="code" xml:space="preserve"><tspan class="pun">}</tspan></text>
+  <text x="86" y="288" class="code" xml:space="preserve"><tspan class="cm">// </tspan><tspan class="kw" font-weight="700">@snippet:</tspan><tspan class="pun"> {</tspan></text>
+  <text x="86" y="314" class="code" xml:space="preserve"><tspan class="cm">//   </tspan><tspan class="key">"description"</tspan><tspan class="pun">: </tspan><tspan class="str">"List open pull requests for a repo."</tspan><tspan class="pun">,</tspan></text>
+  <text x="86" y="340" class="code" xml:space="preserve"><tspan class="cm">//   </tspan><tspan class="key">"input"</tspan><tspan class="pun">: { </tspan><tspan class="key">"repo"</tspan><tspan class="pun">: </tspan><tspan class="str">"string"</tspan><tspan class="pun">, </tspan><tspan class="key">"limit"</tspan><tspan class="pun">: </tspan><tspan class="str">"integer"</tspan><tspan class="pun"> } }</tspan></text>
+  <text x="86" y="366" class="code" xml:space="preserve"><tspan class="kw">const</tspan><tspan class="pl"> limit = input.limit ?? </tspan><tspan class="num">20</tspan><tspan class="pun">;</tspan></text>
+  <text x="86" y="392" class="code" xml:space="preserve"><tspan class="kw">const</tspan><tspan class="pl"> r = </tspan><tspan class="kw">await</tspan><tspan class="pl"> tools.</tspan><tspan class="fn">bash</tspan><tspan class="pun">({ command:</tspan></text>
+  <text x="105" y="418" class="code" xml:space="preserve"><tspan class="str">`gh pr list -R ${input.repo} --limit ${limit}`</tspan><tspan class="pun"> });</tspan></text>
+  <text x="86" y="444" class="code" xml:space="preserve"><tspan class="kw">return</tspan><tspan class="pl"> JSON.</tspan><tspan class="fn">parse</tspan><tspan class="pun">(r.output);</tspan></text>
 
   <!-- arrow -->
   <circle cx="730" cy="340" r="34" fill="url(#glowA)"/>
@@ -88,16 +89,16 @@
     <rect x="760" y="215" width="380" height="250" rx="16" fill="url(#card)" stroke="#4c3f8f" stroke-width="1.5"/>
   </g>
   <text x="790" y="248" font-size="12" font-weight="700" fill="#8b7fd8" letter-spacing="2.5">REGISTERED TOOL</text>
-  <text x="790" y="284" font-size="27" font-weight="800" fill="#ffffff">gh-pr-list</text>
-  <text x="790" y="314" class="code" font-size="14.5" fill="#7ee787">tools[<tspan fill="#e6e1f5">"gh-pr-list"</tspan>]({ q })</text>
+  <text x="790" y="284" font-size="27" font-weight="800" fill="#ffffff">list_open_prs</text>
+  <text x="790" y="314" class="code" font-size="14.5" fill="#7ee787">list_open_prs({ repo, limit })</text>
   <line x1="790" y1="334" x2="1110" y2="334" stroke="#3b3368" stroke-width="1.5"/>
   <g font-size="15.5" fill="#cfc8ea">
     <path d="M792,357 l8,5 l-8,5 z" fill="#a78bfa"/>
     <text x="812" y="367">the model calls it by name</text>
     <path d="M792,389 l8,5 l-8,5 z" fill="#a78bfa"/>
-    <text x="812" y="399">other tools compose it</text>
+    <text x="812" y="399">other snippets compose it</text>
     <path d="M792,421 l8,5 l-8,5 z" fill="#a78bfa"/>
-    <text x="812" y="431">other snippets reuse it</text>
+    <text x="812" y="431" class="code" font-size="13.5" fill="#7ee787">repo_stats → list_open_prs → bash</text>
   </g>
 
   <!-- feature chips -->
@@ -117,6 +118,6 @@
   </g>
 
   <!-- footer -->
-  <text x="600" y="570" font-size="17" fill="#7b7594" text-anchor="middle">best-effort · idempotent · pure glue — a snippet never blocks a tool call</text>
+  <text x="600" y="570" font-size="17" fill="#7b7594" text-anchor="middle">snippet body = unchanged codemode script — runs in the same QuickJS sandbox as a model-written one</text>
   <text x="600" y="598" font-size="14" fill="#5c5775" text-anchor="middle">github.com/tychenjiajun/pi-codemode-snippets</text>
 </svg>
