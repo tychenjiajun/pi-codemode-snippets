@@ -29,10 +29,30 @@
     "agentic-coding",
     "tool-calling",
     "quickjs",
-    "sandbox"
+    "sandbox",
+    "pi",
+    "pi-coding-agent",
+    "ai-coding",
+    "developer-tools",
+    "cli-snippets",
+    "tool-registry",
+    "script-to-tool",
+    "composition",
+    "idempotent",
+    "json-schema",
+    "typescript",
+    "mcp"
   ],
   "author": "Jiajun Chen <tychenjiajun@live.cn>",
   "license": "MIT",
+  "homepage": "https://github.com/tychenjiajun/pi-codemode-snippets#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tychenjiajun/pi-codemode-snippets.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tychenjiajun/pi-codemode-snippets/issues"
+  },
   "sideEffects": false,
   "files": [
     "src/**/*.ts",
@@ -40,6 +60,8 @@
     "skills/**",
     "examples/**",
     "README.md",
+    "README.zh-CN.md",
+    "assets/**",
     "DESIGN.md",
     "LICENSE"
   ],
@@ -47,6 +69,7 @@
     "extensions": [
       "./src/index.ts"
     ],
+    "image": "./assets/preview.svg",
     "skills": [
       "./skills"
     ]
