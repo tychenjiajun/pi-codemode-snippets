@@ -26,12 +26,12 @@ import { isAbsolute, join, resolve } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import type { ExtensionAPI, ExtensionContext, ExtensionFactory, SessionStartEvent } from "@earendil-works/pi-coding-agent";
 
-import { registerSnippetCommands } from "./commands.ts";
+import { formatStatusLine, registerSnippetCommands } from "./commands.ts";
 import { captureCodemodeExecutor, type CodemodeExecutor } from "./codemode.ts";
 import { DEFAULT_MAX_NESTING_DEPTH } from "./execute.ts";
 import { loadSnippets, type SnippetFs } from "./snippet.ts";
 import { createSnippetTool } from "./tool.ts";
-import type { SnippetDir, SnippetIssue, SnippetLoadResult } from "./types.ts";
+import type { SnippetDir, SnippetIssue, SnippetLoadResult, SnippetStatus } from "./types.ts";
 
 export interface CodemodeSnippetsOptions {
 	/** Cap on snippet→snippet nesting. Defaults to {@link DEFAULT_MAX_NESTING_DEPTH}. */
@@ -43,13 +43,34 @@ export interface CodemodeSnippetsOptions {
 }
 
 const EMPTY_RESULT: SnippetLoadResult = { snippets: [], issues: [], shadowed: [] };
+const EMPTY_STATUS: SnippetStatus = { ...EMPTY_RESULT, registered: [] };
+
+/**
+ * Combine the load result with the registration outcome: which loaded snippets
+ * actually got a tool (the `registered` set) and why the others did not (the
+ * registration issues). Pure, so `/snippet list`, `/snippet validate`, and the
+ * session-start summary all read the same value.
+ */
+export function toStatus(
+	result: SnippetLoadResult,
+	registrationIssues: readonly SnippetIssue[],
+	registered: ReadonlySet<string>,
+): SnippetStatus {
+	const names = new Set(result.snippets.map((snippet) => snippet.name));
+	return {
+		...result,
+		issues: [...result.issues, ...registrationIssues],
+		registered: [...registered].filter((name) => names.has(name)),
+	};
+}
 
 /** Build the extension factory. */
 export function createCodemodeSnippetsExtension(options: CodemodeSnippetsOptions = {}): ExtensionFactory {
 	return (pi: ExtensionAPI) => {
 		const maxNestingDepth = options.maxNestingDepth ?? DEFAULT_MAX_NESTING_DEPTH;
 		const registered = new Set<string>();
-		let last: SnippetLoadResult = EMPTY_RESULT;
+		let last: SnippetStatus = EMPTY_STATUS;
+		let registrationIssues: readonly SnippetIssue[] = [];
 
 		// Capture the built-in codemode executor once. Nothing is registered, so the
 		// model still sees exactly one `codemode` tool and scripts cannot nest.
@@ -64,17 +85,18 @@ export function createCodemodeSnippetsExtension(options: CodemodeSnippetsOptions
 
 		pi.on("session_start", async (_event: SessionStartEvent, ctx: ExtensionContext) => {
 			const result = await loadSnippets(resolveDirs(ctx.cwd, ctx.isProjectTrusted()), options.fs);
-			const conflicts = registerSnippetTools(pi, result, registered, maxNestingDepth, executor);
-			last = { ...result, issues: [...result.issues, ...conflicts] };
-			reportProblems(ctx, last);
+			registrationIssues = registerSnippetTools(pi, result, registered, maxNestingDepth, executor);
+			last = toStatus(result, registrationIssues, registered);
+			reportStatus(ctx, last);
 		});
 
 		registerSnippetCommands(pi, {
 			list: () => last,
 			rescan: async (ctx) => {
 				const result = await loadSnippets(resolveDirs(ctx.cwd, ctx.isProjectTrusted()), options.fs);
-				last = result;
-				return result;
+				last = toStatus(result, registrationIssues, registered);
+				updateStatusLine(ctx, last);
+				return last;
 			},
 		});
 	};
@@ -146,14 +168,34 @@ function expandPath(entry: string, cwd: string): string {
 	return isAbsolute(value) ? value : resolve(cwd, value);
 }
 
-/** One warning at session start when snippets could not all load. */
-function reportProblems(ctx: ExtensionContext, result: SnippetLoadResult): void {
-	const count = result.issues.length + result.shadowed.length;
+/** Refresh the footer status line after any load or rescan. */
+export function updateStatusLine(ctx: ExtensionContext, status: SnippetStatus): void {
+	if (ctx.hasUI) ctx.ui.setStatus("snippets", formatStatusLine(status));
+}
+
+/**
+ * The footer status line plus, at session start, one warning when anything is
+ * wrong: the footer keeps the live count visible, the warning carries the first
+ * reason and points at `/snippet list`, which has the per-file detail.
+ */
+export function reportStatus(ctx: ExtensionContext, status: SnippetStatus): void {
+	updateStatusLine(ctx, status);
+
+	const count = status.issues.length + status.shadowed.length;
 	if (count === 0) return;
 
+	const notRegistered = status.snippets.length - status.registered.length;
+	const parts: string[] = [];
+	if (notRegistered > 0) parts.push(`${notRegistered} of ${status.snippets.length} snippets not registered`);
+	if (status.shadowed.length > 0) {
+		const names = [...new Set(status.shadowed.map((conflict) => conflict.name))].join(", ");
+		parts.push(`${status.shadowed.length} shadowed (${names})`);
+	}
 	const first =
-		result.issues[0]?.message ?? (result.shadowed[0] ? `"${result.shadowed[0].name}" is shadowed` : "unknown problem");
-	const message = `pi-codemode-snippets: ${count} problem${count === 1 ? "" : "s"} (${first}). Run /snippet validate.`;
+		status.issues[0]?.message ??
+		(status.shadowed[0] ? `"${status.shadowed[0].name}" is shadowed` : "unknown problem");
+	const detail = parts.length > 0 ? `${parts.join("; ")} — first: ${first}` : first;
+	const message = `pi-codemode-snippets: ${count} problem${count === 1 ? "" : "s"} (${detail}). Run /snippet list.`;
 
 	if (ctx.hasUI) ctx.ui.notify(message, "warning");
 	else console.warn(message);

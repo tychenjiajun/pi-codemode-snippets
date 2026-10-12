@@ -130,7 +130,13 @@ describe("loadSnippets", () => {
 		expect(result.snippets).toHaveLength(1);
 		expect(result.snippets[0]?.description).toBe("project");
 		expect(result.shadowed).toEqual([
-			{ name: "a", path: "/proj/.pi/snippets/a.js", shadowedPath: "/user/snippets/a.js" },
+			{
+				name: "a",
+				path: "/proj/.pi/snippets/a.js",
+				scope: "project",
+				shadowedPath: "/user/snippets/a.js",
+				shadowedScope: "user",
+			},
 		]);
 	});
 

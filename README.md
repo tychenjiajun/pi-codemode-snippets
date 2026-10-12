@@ -209,14 +209,38 @@ the runtime check could not see them).
 
 | Command | Purpose |
 |---|---|
-| `/snippet list` | Loaded snippets with scope, path, disabled state, shadowing, problems. |
+| `/snippet list` | Every file grouped by outcome: registered (✓), not registered (✗ + reason, ⏸ disabled), shadowed, problems. |
 | `/snippet show <name>` | A snippet's pragma summary and body. |
-| `/snippet validate` | Re-scan the directories and report every problem. |
+| `/snippet validate` | Re-scan the directories, report every problem, and count what is registered. |
 | `/snippet preview <name> [json]` | Print the exact codemode script the tool would run. |
 
 Commands run in the command context, which has no `executeTool()`, so there is
 no `/snippet run`. Running a snippet is an ordinary tool call: ask the model, or
 call it from a codemode script. `preview` is the deterministic dry run.
+
+`list` answers "did my script become a tool?" in one screen:
+
+```
+Snippets: 4 registered, 1 not registered, 2 problems.
+
+Registered (4):
+  ✓ ping_a  project  <cwd>/.pi/snippets/ping_a.js
+
+Not registered (1):
+  ✗ bash  user  ~/.pi/agent/snippets/bash.js
+      tool name "bash" is already registered by another tool; snippet skipped
+
+Problems (2):
+  ⚠ ~/.pi/agent/snippets/codemode.js: snippet name "codemode" is reserved…
+```
+
+A project-level override shows both files and both scopes (`… (user) is
+overridden by … (project)`). The status surfaces in three places: this chat
+output from `list`, a footer line (`snippets: 4/5 registered, 2 problems`)
+refreshed at session start and after `validate`, and a warning carrying the
+first reason when anything is wrong. Like `/mcp status`, the list is written
+with `notify()` — persistent, scrollable chat text — because the commands only
+report state; a `ctx.ui.custom()` screen would add interaction we do not need.
 
 ## How a snippet runs
 

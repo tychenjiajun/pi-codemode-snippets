@@ -189,14 +189,36 @@ const out = await tools.bash({ command: "git log --oneline -20" });
 
 | Command | Purpose |
 |---|---|
-| `/snippet list` | 显示代码段（ scope、路径、禁用状态、遮罩、问题）。 |
+| `/snippet list` | 按结果分组显示每个文件：已注册（✓）、未注册（✗ + 原因，⏸ 被禁用）、被遮罩、问题。 |
 | `/snippet show <name>` | 显示代码段的 pragma 摘要与正文。 |
-| `/snippet validate` | 重新扫描目录并报告所有问题。 |
+| `/snippet validate` | 重新扫描目录、报告所有问题，并统计注册数量。 |
 | `/snippet preview <name> [json]` | 打印工具实际要运行的 codemode 脚本。 |
 
 命令在命令上下文中运行，而命令上下文没有 `executeTool()`，所以不存在
 `/snippet run`。运行代码段是一次普通工具调用：叫模型使用，或从 codemode 脚本中调用。
 `preview` 就是确定性的“干跑”。
+
+`list` 一屏回答“我的脚本注册成工具了吗”：
+
+```
+Snippets: 4 registered, 1 not registered, 2 problems.
+
+Registered (4):
+  ✓ ping_a  project  <cwd>/.pi/snippets/ping_a.js
+
+Not registered (1):
+  ✗ bash  user  ~/.pi/agent/snippets/bash.js
+      tool name "bash" is already registered by another tool; snippet skipped
+
+Problems (2):
+  ⚠ ~/.pi/agent/snippets/codemode.js: snippet name "codemode" is reserved…
+```
+
+项目级覆盖会同时列出两个文件及各自的 scope（`… (user) is overridden by …
+(project)`）。状态在三处展示：`list` 的聊天输出、会话启动与 `validate` 之后
+刷新的页脚行（`snippets: 4/5 registered, 2 problems`），以及出问题时带首个
+原因的警告。与 `/mcp status` 一致，列表通过 `notify()` 输出（持久、可滚动的
+聊天文本）——这些命令只做只读展示，用 `ctx.ui.custom()` 开一屏反而多余。
 
 ## 代码段如何运行
 

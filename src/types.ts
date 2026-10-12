@@ -65,8 +65,12 @@ export interface SnippetConflict {
 	readonly name: string;
 	/** The winning file. */
 	readonly path: string;
+	/** The scope the winning file was found in. */
+	readonly scope: SnippetScope;
 	/** The losing file. */
 	readonly shadowedPath: string;
+	/** The scope the losing file was found in. */
+	readonly shadowedScope: SnippetScope;
 }
 
 /** The outcome of scanning the snippet directories. */
@@ -83,4 +87,15 @@ export interface SnippetLoadResult {
 export interface SnippetDir {
 	readonly dir: string;
 	readonly scope: SnippetScope;
+}
+
+/**
+ * The library's full status: what loaded, which of them registered a tool, and
+ * what collided. This is what `/snippet list` and the session-start summary
+ * render, so every user-facing "did my script become a tool?" question is
+ * answered from one value.
+ */
+export interface SnippetStatus extends SnippetLoadResult {
+	/** Names whose tools are registered in this session (enabled, not skipped). */
+	readonly registered: readonly string[];
 }

@@ -153,7 +153,13 @@ export async function loadSnippets(
 				}
 				const previous = byName.get(built.snippet.name);
 				if (previous) {
-					shadowed.push({ name: built.snippet.name, path: built.snippet.path, shadowedPath: previous.path });
+					shadowed.push({
+						name: built.snippet.name,
+						path: built.snippet.path,
+						scope: built.snippet.scope,
+						shadowedPath: previous.path,
+						shadowedScope: previous.scope,
+					});
 				}
 				byName.set(built.snippet.name, built.snippet);
 			} catch (error) {

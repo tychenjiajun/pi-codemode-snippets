@@ -15,13 +15,13 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 
 import { buildSnippetCode } from "./codegen.ts";
-import type { Snippet, SnippetIssue, SnippetLoadResult } from "./types.ts";
+import type { Snippet, SnippetIssue, SnippetStatus } from "./types.ts";
 
 export interface SnippetCommandsHost {
-	/** The snippets and issues from the most recent load. */
-	list(): SnippetLoadResult;
+	/** What loaded, what registered, and what collided — from the most recent load. */
+	list(): SnippetStatus;
 	/** Re-scan the snippet directories without re-registering tools. */
-	rescan(ctx: ExtensionCommandContext): Promise<SnippetLoadResult>;
+	rescan(ctx: ExtensionCommandContext): Promise<SnippetStatus>;
 }
 
 const USAGE = [
@@ -38,29 +38,85 @@ export function formatIssue(issue: SnippetIssue): string {
 	return `  ⚠ ${name}: ${issue.message}`;
 }
 
-/** `/snippet list`. */
-export function formatList(result: SnippetLoadResult): string {
-	if (result.snippets.length === 0) {
-		const lines = ["No snippets found.", "", "Add a `.js` file to ~/.pi/agent/snippets/ or <cwd>/.pi/snippets/."];
-		if (result.issues.length > 0) lines.push("", ...result.issues.map(formatIssue));
-		return lines.join("\n");
+/**
+ * The footer status line (`ctx.ui.setStatus("snippets", …)`): one glance at
+ * how many snippets became tools, plus unresolved problems and overrides.
+ */
+export function formatStatusLine(status: SnippetStatus): string {
+	const parts = [`${status.registered.length}/${status.snippets.length} registered`];
+	if (status.issues.length > 0) parts.push(`${status.issues.length} problem${status.issues.length === 1 ? "" : "s"}`);
+	if (status.shadowed.length > 0) parts.push(`${status.shadowed.length} shadowed`);
+	return `snippets: ${parts.join(", ")}`;
+}
+
+/** Names with their registration issue, for the "why is it not registered?" line. */
+function registrationReasons(issues: readonly SnippetIssue[]): Map<string, string> {
+	const reasons = new Map<string, string>();
+	for (const issue of issues) if (issue.name) reasons.set(issue.name, issue.message);
+	return reasons;
+}
+
+/** `  ✓ name  scope  path`, name column aligned across the section. */
+function snippetRow(snippet: Snippet, marker: string, width: number): string {
+	return `  ${marker} ${snippet.name.padEnd(width)}  ${snippet.scope.padEnd(7)}  ${snippet.path}`;
+}
+
+function nameWidth(snippets: readonly Snippet[]): number {
+	return Math.max(...snippets.map((snippet) => snippet.name.length));
+}
+
+/** Issues that belong to no loaded snippet: bad files, unreadable directories. */
+function fileIssues(status: SnippetStatus): SnippetIssue[] {
+	const names = new Set(status.snippets.map((snippet) => snippet.name));
+	return status.issues.filter((issue) => issue.name === undefined || !names.has(issue.name));
+}
+
+/** `/snippet list` — grouped by outcome, so every file's fate is on screen. */
+export function formatList(status: SnippetStatus): string {
+	if (status.snippets.length === 0 && status.issues.length === 0 && status.shadowed.length === 0) {
+		return ["No snippets found.", "", "Add a `.js` file to ~/.pi/agent/snippets/ or <cwd>/.pi/snippets/."].join("\n");
 	}
 
-	const width = Math.max(...result.snippets.map((snippet) => snippet.name.length));
-	const lines = [`Snippets (${result.snippets.length}):`];
-	for (const snippet of result.snippets) {
-		const flags = snippet.enabled ? "" : "  [disabled]";
-		lines.push(`  ${snippet.name.padEnd(width)}  ${snippet.scope.padEnd(7)}  ${snippet.path}${flags}`);
+	const reasons = registrationReasons(status.issues);
+	const registered = new Set(status.registered);
+	const withTool = status.snippets.filter((snippet) => registered.has(snippet.name));
+	const withoutTool = status.snippets.filter((snippet) => !registered.has(snippet.name));
+	const problems = fileIssues(status);
+
+	const summary = [`${withTool.length} registered`];
+	if (withoutTool.length > 0) summary.push(`${withoutTool.length} not registered`);
+	if (status.shadowed.length > 0) summary.push(`${status.shadowed.length} shadowed`);
+	if (problems.length > 0) summary.push(`${problems.length} problem${problems.length === 1 ? "" : "s"}`);
+	const lines = [`Snippets: ${summary.join(", ")}.`];
+
+	if (withTool.length > 0) {
+		const width = nameWidth(withTool);
+		lines.push("", `Registered (${withTool.length}):`, ...withTool.map((snippet) => snippetRow(snippet, "✓", width)));
 	}
-	if (result.shadowed.length > 0) {
-		lines.push("", "Shadowed by a higher-precedence file:");
-		for (const conflict of result.shadowed) {
-			lines.push(`  ${conflict.name}: ${conflict.shadowedPath} ← ${conflict.path}`);
+
+	if (withoutTool.length > 0) {
+		const width = nameWidth(withoutTool);
+		lines.push("", `Not registered (${withoutTool.length}):`);
+		for (const snippet of withoutTool) {
+			const reason = snippet.enabled
+				? (reasons.get(snippet.name) ?? "not registered — run /reload")
+				: "disabled by the pragma (`enabled: false`)";
+			lines.push(snippetRow(snippet, snippet.enabled ? "✗" : "⏸", width));
+			lines.push(`      ${reason}`);
 		}
 	}
-	if (result.issues.length > 0) {
-		lines.push("", `Problems (${result.issues.length}):`, ...result.issues.map(formatIssue));
+
+	if (status.shadowed.length > 0) {
+		lines.push("", `Shadowed by a higher-precedence file (${status.shadowed.length}):`);
+		for (const conflict of status.shadowed) {
+			lines.push(
+				`  ↷ ${conflict.name}: ${conflict.shadowedPath} (${conflict.shadowedScope}) ` +
+					`is overridden by ${conflict.path} (${conflict.scope})`,
+			);
+		}
 	}
+
+	if (problems.length > 0) lines.push("", `Problems (${problems.length}):`, ...problems.map(formatIssue));
 	return lines.join("\n");
 }
 
@@ -80,19 +136,28 @@ export function formatShow(snippet: Snippet): string {
 }
 
 /** `/snippet validate`. */
-export function formatValidation(result: SnippetLoadResult): string {
-	const lines = [`Checked ${result.snippets.length} snippet${result.snippets.length === 1 ? "" : "s"}.`];
-	if (result.issues.length === 0 && result.shadowed.length === 0) {
+export function formatValidation(status: SnippetStatus): string {
+	const count = status.snippets.length;
+	const registered = status.registered.length;
+	const lines = [
+		`Checked ${count} snippet${count === 1 ? "" : "s"}: ` +
+			`${registered} registered, ${count - registered} not registered.`,
+	];
+	if (status.issues.length === 0 && status.shadowed.length === 0) {
 		lines.push("No problems found.");
+		if (count - registered > 0) lines.push("Run /reload to register the new files.");
 		return lines.join("\n");
 	}
-	if (result.issues.length > 0) {
-		lines.push("", `Problems (${result.issues.length}):`, ...result.issues.map(formatIssue));
+	if (status.issues.length > 0) {
+		lines.push("", `Problems (${status.issues.length}):`, ...status.issues.map(formatIssue));
 	}
-	if (result.shadowed.length > 0) {
-		lines.push("", `Shadowed (${result.shadowed.length}):`);
-		for (const conflict of result.shadowed) {
-			lines.push(`  ${conflict.name}: ${conflict.shadowedPath} ← ${conflict.path}`);
+	if (status.shadowed.length > 0) {
+		lines.push("", `Shadowed (${status.shadowed.length}):`);
+		for (const conflict of status.shadowed) {
+			lines.push(
+				`  ${conflict.name}: ${conflict.shadowedPath} (${conflict.shadowedScope}) ` +
+					`is overridden by ${conflict.path} (${conflict.scope})`,
+			);
 		}
 	}
 	return lines.join("\n");
