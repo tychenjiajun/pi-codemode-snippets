@@ -69,7 +69,16 @@ describe("buildSnippet", () => {
 		expect(result.message).toContain("snippet name");
 	});
 
-	it.each(["codemode", "CoDeMoDe", "mcp__github__search", "MCP__x__y"])(
+	it.each([
+		"codemode",
+		"CoDeMoDe",
+		"tool_search",
+		"Tool_Search",
+		"mcp__github__search",
+		"MCP__x__y",
+		"list_mcp_resources",
+		"read_mcp_resource",
+	])(
 		"rejects the reserved name %s",
 		(name) => {
 			const result = buildSnippet({
@@ -101,6 +110,26 @@ describe("buildSnippet", () => {
 			scope: "user",
 		});
 		expect(result.ok).toBe(false);
+	});
+
+	it("accepts a leading body @options line", () => {
+		const result = buildSnippet({
+			source: '// @snippet: {"description":"Demo."}\n// @options: {"timeout_ms": 1000}\nreturn 1;',
+			path: "/user/snippets/demo.js",
+			scope: "user",
+		});
+		expect(result.ok).toBe(true);
+	});
+
+	it("rejects a stray body @options line (pi fails such a script before running)", () => {
+		const result = buildSnippet({
+			source: '// @snippet: {"description":"Demo."}\nconst a = 1;\n// @options: {"timeout_ms": 1000}\nreturn a;',
+			path: "/user/snippets/demo.js",
+			scope: "user",
+		});
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.message).toContain("first line of the body");
 	});
 });
 

@@ -12,7 +12,10 @@
 //   3. every pragma field has the right shape (see src/pragma.ts);
 //   4. the resolved tool name matches `[A-Za-z_][A-Za-z0-9_-]{0,63}` and is
 //      not reserved (`codemode`, `mcp__…` — see reservedNameProblem below);
-//   5. the body is non-empty and its leading `@options:` line (if any) is valid;
+//   5. the body is non-empty and its `@options:` line (if any) is valid,
+//      first, and uses only pi's `max_output_tokens` / `timeout_ms` integer
+//      fields (pi 1.2.0+ fails a script whose `// @options:` line is not
+//      first, or whose fields it does not support);
 //   6. the `input` JSON Schema is an object schema that declares every field
 //      the body actually reads (there is no coercion or default-filling);
 //   7. the body compiles exactly as codemode compiles it — wrapped in
@@ -40,16 +43,23 @@ const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
 // Mirrors reservedNameProblem() in src/snippet.ts; src/skill.test.ts keeps the two in lockstep.
 function reservedNameProblem(name) {
 	const lower = name.toLowerCase();
-	if (lower === "codemode") {
-		return (
-			`snippet name "${name}" is reserved: it would shadow the built-in codemode tool ` +
-			"that runs snippet bodies — rename the file or set another `name`"
-		);
+	if (lower === "codemode" || lower === "tool_search") {
+		const role =
+			lower === "codemode"
+				? "codemode tool that runs snippet bodies"
+				: "tool_search tool that loads deferred MCP tools";
+		return `snippet name "${name}" is reserved: it would shadow the built-in ${role} — rename the file or set another \`name\``;
 	}
 	if (lower.startsWith("mcp__")) {
 		return (
 			`snippet name "${name}" is reserved: names starting with "mcp__" belong to MCP tools, ` +
 			"which register after snippets load — the collision would be silent"
+		);
+	}
+	if (lower === "list_mcp_resources" || lower === "list_mcp_resource_templates" || lower === "read_mcp_resource") {
+		return (
+			`snippet name "${name}" is reserved: it is an MCP resource tool name, ` +
+			"which registers after snippets load — the collision would be silent"
 		);
 	}
 	return undefined;
@@ -193,8 +203,13 @@ function validatePragma(raw, problems) {
 
 	for (const key of ["timeoutMs", "maxOutputTokens"]) {
 		const value = raw[key];
-		if (value !== undefined && (typeof value !== "number" || !Number.isFinite(value) || value <= 0)) {
-			problems.push(`"${key}" must be a positive number`);
+		if (value === undefined) continue;
+		// Mirrors pi's `@options` parsing: integer limits only, `timeout_ms`
+		// capped at 2147483647, or the generated script fails at runtime.
+		if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
+			problems.push(`"${key}" must be a positive integer`);
+		} else if (key === "timeoutMs" && value > 2147483647) {
+			problems.push('"timeoutMs" must be at most 2147483647 milliseconds (pi\'s `timeout_ms` limit)');
 		}
 	}
 
@@ -432,16 +447,48 @@ export function checkSnippetFile(path) {
 				if (!isPlainObject(options)) {
 					problems.push('the body\'s `@options:` line must be a JSON object');
 				} else {
-					for (const key of ["timeout_ms", "max_output_tokens"]) {
+					// Mirrors pi's `@options` parser: only `max_output_tokens`
+					// (non-negative integer) and `timeout_ms` (positive integer
+					// up to 2147483647); anything else fails every call.
+					for (const key of Object.keys(options)) {
+						if (key !== "timeout_ms" && key !== "max_output_tokens") {
+							problems.push(
+								`the body's \`@options:\` only supports \`max_output_tokens\` and \`timeout_ms\`; got \`${key}\``,
+							);
+							continue;
+						}
 						const value = options[key];
-						if (value !== undefined && (typeof value !== "number" || !Number.isFinite(value) || value <= 0)) {
-							problems.push(`the body's \`@options:\` \`${key}\` must be a positive number`);
+						if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+							problems.push(`the body's \`@options.${key}\` must be an integer`);
+						} else if (key === "timeout_ms" && (value <= 0 || value > 2147483647)) {
+							problems.push("the body's `@options.timeout_ms` must be a positive integer up to 2147483647");
+						} else if (key === "max_output_tokens" && value < 0) {
+							problems.push("the body's `@options.max_output_tokens` must be a non-negative integer");
 						}
 					}
 				}
 			} catch (error) {
 				problems.push(`the body's \`@options:\` line is not valid JSON: ${error.message}`);
 			}
+		}
+		// pi 1.2.0+ fails a script whose `// @options:` line is not its first
+		// line; the extension always prepends `const input = …`, so any
+		// `// @options:` line left in the body can never be first. Flag it,
+		// mirroring bodyOptionsProblem() in src/pragma.ts (which scans the
+		// trimmed body, so trim here too for identical line numbers).
+		const scanBody = body.trim();
+		const rawLines = scanBody.split("\n");
+		const firstContent = rawLines.findIndex((line) => line.trim() !== "");
+		const stray = rawLines.findIndex(
+			(line, index) =>
+				line.trimStart().startsWith("// @options:") && !(index === firstContent && split.optionsText !== undefined),
+		);
+		if (stray !== -1) {
+			problems.push(
+				stray === firstContent
+					? "the body's leading `// @options:` line is not a valid JSON object — fix it or remove it"
+					: `the body has a \`// @options:\` line on body line ${stray + 1}: pi requires it to be the first line of the body — move it to the top or remove it`,
+			);
 		}
 	}
 

@@ -7,7 +7,7 @@
 // snippet directory that starts with a `// @snippet: {…}` pragma becomes an
 // ordinary pi tool, named by the snippet name.
 //
-// Each snippet is registered with the default `direct` exposure, so it is
+// Each snippet is registered with an explicit `direct` exposure, so it is
 // declared to the model and callable from scripts and `ctx.executeTool` while
 // active. Running one delegates to the built-in codemode tool, so the body is
 // exactly the codemode script it always was.

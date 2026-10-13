@@ -192,9 +192,11 @@ export function validatePragma(
 	] as const) {
 		const candidate = value[field];
 		if (candidate === undefined) continue;
-		if (typeof candidate !== "number" || !Number.isFinite(candidate) || candidate <= 0) {
-			return { ok: false, message: `\`${field}\` must be a positive number` };
+		if (typeof candidate !== "number") {
+			return { ok: false, message: `\`${field}\` must be a positive integer` };
 		}
+		const problem = limitValueProblem(field, candidate);
+		if (problem !== undefined) return { ok: false, message: problem };
 		pragma[key] = candidate;
 	}
 
@@ -223,6 +225,49 @@ export function validatePragma(
 	return { ok: true, pragma };
 }
 
+/** The `@options` fields pi's codemode accepts (pi 1.2.0). */
+const OPTIONS_FIELDS = ["max_output_tokens", "timeout_ms"] as const;
+
+/**
+ * Why a pragma limit cannot run, mirroring pi's own `@options` parsing: the
+ * merged value must be an integer (`timeout_ms` up to 2147483647) or pi
+ * rejects the generated script before it runs. The pragma keeps both limits
+ * positive — a zero cap is useless and pi rejects `timeout_ms: 0` anyway.
+ */
+export function limitValueProblem(field: "timeoutMs" | "maxOutputTokens", value: unknown): string | undefined {
+	if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
+		return `\`${field}\` must be a positive integer`;
+	}
+	if (field === "timeoutMs" && value > 2147483647) {
+		return `\`${field}\` must be at most 2147483647 milliseconds (pi's \`timeout_ms\` limit)`;
+	}
+	return undefined;
+}
+
+/**
+ * Why a parsed body `@options:` object cannot run, mirroring pi's own parser:
+ * pi 1.2.0 accepts only `max_output_tokens` (a non-negative integer) and
+ * `timeout_ms` (a positive integer up to 2147483647) and fails the call on
+ * anything else, so report it at load time instead of on every call.
+ */
+export function optionsValueProblem(options: Record<string, unknown>): string | undefined {
+	for (const [key, option] of Object.entries(options)) {
+		if (!(OPTIONS_FIELDS as readonly string[]).includes(key)) {
+			return `the body's \`@options:\` only supports \`max_output_tokens\` and \`timeout_ms\`; got \`${key}\``;
+		}
+		if (typeof option !== "number" || !Number.isSafeInteger(option)) {
+			return `the body's \`@options.${key}\` must be an integer`;
+		}
+		if (key === "timeout_ms" && (option <= 0 || option > 2147483647)) {
+			return "the body's `@options.timeout_ms` must be a positive integer up to 2147483647";
+		}
+		if (key === "max_output_tokens" && option < 0) {
+			return "the body's `@options.max_output_tokens` must be a non-negative integer";
+		}
+	}
+	return undefined;
+}
+
 export interface SplitBodyOptionsResult {
 	/** The `@options:` values found at the start of the body, if any. */
 	readonly options?: Record<string, unknown>;
@@ -232,7 +277,7 @@ export interface SplitBodyOptionsResult {
 
 /**
  * Pull a leading `@options:` comment out of a script body. A malformed options
- * comment is left in place so the codemode sandbox reports it, rather than the
+ * comment is left in place for `bodyOptionsProblem` to report, rather than the
  * extension silently changing the script.
  */
 export function splitBodyOptions(body: string): SplitBodyOptionsResult {
@@ -277,4 +322,33 @@ export function splitBodyOptions(body: string): SplitBodyOptionsResult {
 
 	const remaining = (lead + rest.slice(consumed)).replace(/^[ \t]*\r?\n/, "");
 	return { options: parsed, body: remaining };
+}
+
+/**
+ * Why the body's `@options:` comments cannot run, or `undefined` when they are
+ * fine. The extension injects `const input = …` before the body, so any
+ * `// @options:` line left in the body — a malformed leading one, or a valid
+ * one that is not the body's first line — lands after the first line of the
+ * generated script, and pi 1.2.0+ fails the call with an error before the
+ * script runs instead of silently dropping the options.
+ */
+export function bodyOptionsProblem(body: string): string | undefined {
+	// A valid leading comment is extracted; a malformed one stays in the body.
+	const split = splitBodyOptions(body);
+	const extracted = split.options !== undefined;
+	const lines = body.split("\n");
+	const firstContent = lines.findIndex((line) => line.trim() !== "");
+	for (let index = 0; index < lines.length; index += 1) {
+		const line = lines[index] ?? "";
+		if (!line.trimStart().startsWith("// @options:")) continue;
+		if (index === firstContent) {
+			// Extracted means this line was valid and removed; a duplicate below is a stray line.
+			if (extracted) continue;
+			return "the body's leading `// @options:` line is not a valid JSON object — fix it or remove it";
+		}
+		return `the body has a \`// @options:\` line on body line ${index + 1}: pi requires it to be the first line of the body — move it to the top or remove it`;
+	}
+	// A leading `/* @options: … */` block never appears as a `// @options:`
+	// line above, so its fields are checked here.
+	return split.options !== undefined ? optionsValueProblem(split.options) : undefined;
 }

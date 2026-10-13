@@ -51,7 +51,7 @@ return JSON.parse(result.output);
    It must print `OK` and exit 0. Fix every reported problem and re-run until
    it does. The script checks the pragma JSON, every pragma field, the name
    pattern, the `input` schema (including that the body only reads declared
-   fields), the `@options:` line, and compiles the body with `node:vm` using
+   fields), the `@options:` line (position and fields), and compiles the body with `node:vm` using
    codemode's own wrapper — so a syntax error or a redeclaration of the
    reserved `input` binding fails with the offending line.
 6. **Hand off.** Tell the user to run `/reload` in pi so the new file is
@@ -66,19 +66,29 @@ return JSON.parse(result.output);
 - `name`: defaults to the filename stem; must match
   `[A-Za-z_][A-Za-z0-9_-]{0,63}`. Filename `list-open-prs.js` is fine;
   `list.open.js` is not (stem contains a dot) unless the pragma sets `name`.
-  Two names are reserved: `codemode` (it would shadow the tool snippets run
-  through) and anything starting with `mcp__` (MCP tools register after
-  snippets load, so the collision would be silent). A name already held by a
-  built-in tool such as `bash` loads but registers no tool — the checker
-  cannot see that case; `/snippet validate` reports it.
+  A few names are reserved: `codemode` (it would shadow the tool snippets run
+  through), `tool_search` (it would shadow the deferred-tool loader), anything
+  starting with `mcp__`, and the MCP resource tool names
+  (`list_mcp_resources`, `list_mcp_resource_templates`, `read_mcp_resource`) —
+  MCP tools register after snippets load, so those collisions would be
+  silent. A name already held by a built-in tool such as `bash` loads but
+  registers no tool — the checker cannot see that case; `/snippet validate`
+  reports it.
 - Unknown pragma fields are **errors** — a typo like `"desciption"` would
   otherwise be silently ignored.
 - `annotations` are honesty metadata, not decoration:
   `readOnlyHint: true` only if the snippet never mutates anything;
   `openWorldHint: true` if it reaches external entities (GitHub, the web);
   `destructiveHint` if it deletes or overwrites.
-- `timeoutMs` / `maxOutputTokens`: positive numbers, merged into the
-  generated `@options:` line; a body's own `@options:` line wins.
+- `timeoutMs` / `maxOutputTokens`: positive integers (`timeoutMs` at most
+  2147483647 ms), merged into the generated `@options:` line; a body's own
+  `@options:` line wins. That line must be the **first line of the body** and
+  may carry only pi's own fields — `max_output_tokens` (a non-negative integer)
+  and `timeout_ms` (a positive integer, at most 2147483647). pi 1.2.0+ fails
+  the call before running when an `// @options:` line is not first or carries
+  an unsupported field, and the extension always prepends `const input = …`,
+  so a stray `// @options:` line anywhere else in the body can never run. The
+  loader and the check script both reject such files.
 - Full field table in `references/fields.md`.
 
 ## Input schema rules
@@ -103,8 +113,10 @@ return JSON.parse(result.output);
   debugging; `image(…)` for images.
 - `store(key, value)` / `load(key)` persist across calls — prefix keys with
   `snippet:<name>:` to avoid collisions.
-- Discovery helpers: `ALL_TOOLS`, `searchTools`, `describeTool`,
-  `describeNamespace`; `models` runs classifier and image models.
+- Discovery helpers: `ALL_TOOLS`, `await searchTools(...)`,
+  `await describeTool(...)`, `await describeNamespace(...)` (the three are
+  async — an unawaited promise serializes as `{}`); `models` runs classifier
+  and image models.
 - Full globals table and composition notes in `references/fields.md`.
 
 ## Promoting a pasted codemode script

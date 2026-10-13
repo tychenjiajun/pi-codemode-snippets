@@ -11,7 +11,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 
-import { parseSnippetSource } from "./pragma.ts";
+import { parseSnippetSource, bodyOptionsProblem } from "./pragma.ts";
 import type { Snippet, SnippetConflict, SnippetDir, SnippetIssue, SnippetLoadResult, SnippetScope } from "./types.ts";
 
 /** Filesystem seam, so the loader can be tested without touching disk. */
@@ -37,23 +37,32 @@ const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/;
  *
  * The registration path also skips any name another tool already holds (see
  * `registerSnippetTools`), but that check reads a snapshot of the tool
- * registry taken at session start. These two rules cover what the snapshot
- * cannot see: a disabled `codemode` tool is absent from it, and `mcp__…`
- * tools only register once their server connects, after snippets load — a
- * collision there would be silent.
+ * registry taken at session start. These rules cover what the snapshot
+ * cannot see: a disabled `codemode` or `tool_search` tool is absent from it,
+ * and `mcp__…` tools and the MCP resource tools register after snippets load
+ * — those collisions would be silent. Both built-in names matter because pi
+ * 1.2.0 treats a tool of that name that declares `reachesTools` as the real
+ * codemode/tool_search loader, which snippet tools now declare.
  */
 export function reservedNameProblem(name: string): string | undefined {
 	const lower = name.toLowerCase();
-	if (lower === "codemode") {
-		return (
-			`snippet name "${name}" is reserved: it would shadow the built-in codemode tool ` +
-			"that runs snippet bodies — rename the file or set another `name`"
-		);
+	if (lower === "codemode" || lower === "tool_search") {
+		const role =
+			lower === "codemode"
+				? "codemode tool that runs snippet bodies"
+				: "tool_search tool that loads deferred MCP tools";
+		return `snippet name "${name}" is reserved: it would shadow the built-in ${role} — rename the file or set another \`name\``;
 	}
 	if (lower.startsWith("mcp__")) {
 		return (
 			`snippet name "${name}" is reserved: names starting with "mcp__" belong to MCP tools, ` +
 			"which register after snippets load — the collision would be silent"
+		);
+	}
+	if (lower === "list_mcp_resources" || lower === "list_mcp_resource_templates" || lower === "read_mcp_resource") {
+		return (
+			`snippet name "${name}" is reserved: it is an MCP resource tool name, ` +
+			"which registers after snippets load — the collision would be silent"
 		);
 	}
 	return undefined;
@@ -91,6 +100,13 @@ export function buildSnippet(options: {
 
 	const body = parsed.body.trim();
 	if (body === "") return { ok: false, message: "the snippet has an empty body" };
+
+	// pi 1.2.0+ fails a script whose `// @options:` line is not its first line;
+	// the generated script always prepends `const input = …`, so a body-level
+	// options line can never end up first. Report it at load time instead of
+	// failing every call at runtime.
+	const optionsProblem = bodyOptionsProblem(body);
+	if (optionsProblem !== undefined) return { ok: false, message: optionsProblem };
 
 	return {
 		ok: true,

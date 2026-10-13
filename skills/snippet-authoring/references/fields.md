@@ -20,19 +20,24 @@ Accepted pragma shapes:
 
 A shebang before the pragma is allowed. The first body line may be pi's own
 `// @options: {"max_output_tokens": 500}` line; it merges with the pragma
-limits, and the body wins on conflict.
+limits, and the body wins on conflict. Only pi's own fields are accepted —
+`max_output_tokens` (a non-negative integer) and `timeout_ms` (a positive
+integer, at most 2147483647) — anything else fails every call, so the loader
+rejects it. It must stay first: pi 1.2.0+ fails the call with an error before
+running when an `// @options:` line is not the first line of the script, so a
+stray one anywhere else in the body is rejected at load time.
 
 ## Pragma fields
 
 | Field | Required | Default | Meaning |
 |---|---|---|---|
 | `description` | **yes** | — | Model-facing description. Files without it are skipped. |
-| `name` | no | filename stem | Tool name, must match `[A-Za-z_][A-Za-z0-9_-]{0,63}`; `codemode` and `mcp__…` are reserved. |
+| `name` | no | filename stem | Tool name, must match `[A-Za-z_][A-Za-z0-9_-]{0,63}`; `codemode`, `tool_search`, `mcp__…`, and the MCP resource tool names are reserved. |
 | `label` | no | `name` | UI label. |
 | `input` | no | `{"type":"object","properties":{}}` | JSON Schema of the single object argument. |
 | `enabled` | no | `true` | `false` keeps the file but registers no tool. |
-| `timeoutMs` | no | unset | Merged into the generated `@options.timeout_ms`. |
-| `maxOutputTokens` | no | unset | Merged into the generated `@options.max_output_tokens`. |
+| `timeoutMs` | no | unset | Merged into the generated `@options.timeout_ms`. Positive integer (ms), at most 2147483647. |
+| `maxOutputTokens` | no | unset | Merged into the generated `@options.max_output_tokens`. Positive integer. |
 | `annotations` | no | unset | `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` (booleans). |
 | `promptGuidelines` | no | unset | Extra guideline bullets shown with the tool. |
 
@@ -69,7 +74,7 @@ script catches the typo).
 | `text(value)`, `image(value)`, `console.log(...)`, `exit()` | Add output. |
 | `return value` | Add the returned value, like `text()`. |
 | `store(key, value)` / `load(key)` | Persist small JSON values across calls. Prefix keys `snippet:<name>:`. |
-| `ALL_TOOLS`, `searchTools`, `describeTool`, `describeNamespace` | Discover other tools. |
+| `ALL_TOOLS`, `await searchTools(...)`, `await describeTool(...)`, `await describeNamespace(...)` | Discover other tools. The three helpers are async (pi 1.1.0+); unawaited promises serialize as `{}`. |
 | `models` | List and run classifier and image models. |
 
 Not available: filesystem, network, timers, `import`. Get data through
@@ -106,7 +111,9 @@ load at session start; `/reload` re-scans.
 | `needs a non-empty "description"` | Missing/typo'd description | Add the model-facing summary |
 | `unknown @snippet field "…"` | Typo'd field name | Use the exact field names from the table |
 | `must match /^[A-Za-z_]/…/` | Bad name or filename stem (dots etc.) | Rename file or set `name` |
-| `is reserved` | Name is `codemode` or starts with `mcp__` | Rename file or set another `name` |
+| `is reserved` | Name is `codemode`, `tool_search`, starts with `mcp__`, or is an MCP resource tool name | Rename file or set another `name` |
+| `// @options:` line … first line of the body | `// @options:` line after the body's first line (pi 1.2.0+ fails the call) | Move it to the top of the body or remove it |
+| `only supports \`max_output_tokens\` and \`timeout_ms\`` | Unknown or wrongly-typed field in the body's `@options:` line (pi fails the call) | Use only `max_output_tokens` / `timeout_ms` as integers, or remove the line |
 | `syntax error at line N` | Body doesn't compile | Fix the line shown — N maps to your file |
 | `Identifier 'input' has already been declared` | Body redeclares `input` | Remove the declaration; `input` is injected |
 | `the body reads input.x but … does not declare "x"` | Schema missing a field the body uses | Add it to `input.properties` |
