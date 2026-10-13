@@ -12,7 +12,7 @@ English | [简体中文](./docs/README.zh-CN.md)
 [![pi extension](https://img.shields.io/badge/pi-extension-7c3aed.svg)](https://pi.dev/docs/latest/extensions)
 [![pi package](https://img.shields.io/badge/pi-package-7c3aed.svg)](https://pi.dev/docs/latest/packages)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](./tsconfig.json)
-[![Tests](https://img.shields.io/badge/tests-99%20passing-brightgreen.svg)](./package.json)
+[![Tests](https://img.shields.io/badge/tests-142%20passing-brightgreen.svg)](./package.json)
 [![pnpm](https://img.shields.io/badge/package%20manager-pnpm-f69220.svg)](https://pnpm.io)
 
 **pi-codemode-snippets** turns user-authored JavaScript files into first-class
@@ -60,6 +60,9 @@ JavaScript there are no new semantics to learn.
   snippet directories.
 - Reads a leading `// @snippet:` (or `/* @snippet:` block) pragma as JSON
   Metadata and registers each file as a pi tool with its `input` JSON Schema.
+  Since pi 1.2.0 each tool also declares `reachesTools`, computed from the
+  generated script, so waiting systems (such as the MCP extension) know which
+  tools a call may reach before it runs.
 - Re-runs the body through pi's built-in `codemode` executor, so the snippet
   keeps the QuickJS sandbox, `tools.*`, `store`/`load`, `models`, nested-call
   permissions (`parentToolCallId`), and usage accounting — nothing else changes.
@@ -142,7 +145,7 @@ these globals are available:
 | `text(value)`, `image(value)`, `console.log(...)`, `exit()` | Add output. |
 | `return value` | Add the returned value like `text()`. |
 | `store(key, value)` / `load(key)` | Persist small JSON values across codemode calls. |
-| `ALL_TOOLS`, `searchTools`, `describeTool`, `describeNamespace` | Discover other tools. |
+| `ALL_TOOLS`, `await searchTools(...)`, `await describeTool(...)`, `await describeNamespace(...)` | Discover other tools (the three helpers are async). |
 | `models` | List and run classifier and image models. |
 
 ### Pragma fields
@@ -150,12 +153,12 @@ these globals are available:
 | Field | Required | Default | Meaning |
 |---|---|---|---|
 | `description` | **yes** | — | Model-facing description. Files without it are skipped. |
-| `name` | no | filename stem | Tool name. Must match `[A-Za-z_][A-Za-z0-9_-]{0,63}`. `codemode` and `mcp__…` are reserved. |
+| `name` | no | filename stem | Tool name. Must match `[A-Za-z_][A-Za-z0-9_-]{0,63}`. `codemode`, `tool_search`, `mcp__…`, and the MCP resource tool names are reserved. |
 | `label` | no | `name` | UI label. |
 | `input` | no | `{"type":"object","properties":{}}` | JSON Schema of the argument object. |
 | `enabled` | no | `true` | `false` keeps the file but does not register the tool. |
-| `timeoutMs` | no | unset | Merged into the generated `@options.timeout_ms`. |
-| `maxOutputTokens` | no | unset | Merged into the generated `@options.max_output_tokens`. |
+| `timeoutMs` | no | unset | Merged into the generated `@options.timeout_ms`. Positive integer (ms), at most 2147483647. |
+| `maxOutputTokens` | no | unset | Merged into the generated `@options.max_output_tokens`. Positive integer. |
 | `annotations` | no | unset | `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`. |
 | `promptGuidelines` | no | unset | Extra guideline bullets shown with the tool. |
 
@@ -178,7 +181,15 @@ object:
 ### Options
 
 A body may begin with pi's own options line. The extension merges it with the
-pragma limits and re-emits a single leading options line. The body wins.
+pragma limits and re-emits a single leading options line. The body wins. Only
+pi's own fields are accepted — `max_output_tokens` (a non-negative integer)
+and `timeout_ms` (a positive integer, at most 2147483647) — and the loader
+rejects anything else at load time, because pi 1.2.0+ fails the call on an
+unsupported field before the script runs. The options line must also be the
+body's first line: pi fails an `// @options:` line that is not first, and
+since the extension always prepends `const input = …`, a stray `// @options:`
+line anywhere else in the body could never run — the loader rejects it
+instead.
 
 ```js
 // @snippet: {"description":"…","timeoutMs":10000}
@@ -200,10 +211,12 @@ earlier ones. The losing file is reported by `/snippet list`.
 
 When a name is already taken by another tool — a built-in such as `bash` or
 `read`, or another extension's tool — the snippet is skipped at registration
-and the conflict is reported by `/snippet validate`. Two names are rejected
+and the conflict is reported by `/snippet validate`. A few names are rejected
 outright, before any tool list exists: `codemode` (it would shadow the tool
-snippets run through) and `mcp__…` (MCP tools connect after snippets load, so
-the runtime check could not see them).
+snippets run through), `tool_search` (it would shadow the deferred-tool
+loader), `mcp__…`, and the MCP resource tool names (`list_mcp_resources`,
+`list_mcp_resource_templates`, `read_mcp_resource`) — MCP tools connect after
+snippets load, so the runtime check could not see them.
 
 ## Commands
 
@@ -367,8 +380,9 @@ API). A `snippets.watch` setting is an open item.
 
 Only `description` (model-facing) and the optional `input` JSON Schema. Omit
 `name` and it defaults to the filename stem (`[A-Za-z_][A-Za-z0-9_-]{0,63}`).
-`codemode` and `mcp__…` are reserved; a name another tool already holds is
-skipped and reported by `/snippet validate`.
+`codemode`, `tool_search`, `mcp__…`, and the MCP resource tool names are
+reserved; a name another tool already holds is skipped and reported by
+`/snippet validate`.
 Without `description` the file is skipped, never errored on.
 
 ## Built on pi
@@ -384,7 +398,7 @@ default factory exports `createCodemodeSnippetsExtension(options)`, the
 
 ```bash
 pnpm install
-pnpm test        # 99 unit tests
+pnpm test        # 142 unit tests
 pnpm typecheck
 pi -e .          # load this checkout as an extension for one session
 ```

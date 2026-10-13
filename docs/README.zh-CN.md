@@ -12,7 +12,7 @@
 [![pi extension](https://img.shields.io/badge/pi-extension-7c3aed.svg)](https://pi.dev/docs/latest/extensions)
 [![pi package](https://img.shields.io/badge/pi-package-7c3aed.svg)](https://pi.dev/docs/latest/packages)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](../tsconfig.json)
-[![Tests](https://img.shields.io/badge/tests-99%20passing-brightgreen.svg)](../package.json)
+[![Tests](https://img.shields.io/badge/tests-142%20passing-brightgreen.svg)](../package.json)
 [![pnpm](https://img.shields.io/badge/package%20manager-pnpm-f69220.svg)](https://pnpm.io)
 
 **pi-codemode-snippets** 把用户编写的 JavaScript 文件变成一等的
@@ -127,7 +127,7 @@ pi packages add pi-codemode-snippets
 | `text(value)`, `image(value)`, `console.log(...)`, `exit()` | 输出内容。 |
 | `return value` | 像 `text()` 一样添加返回值。 |
 | `store(key, value)` / `load(key)` | 在 codemode 调用间持久化小体积 JSON。 |
-| `ALL_TOOLS`, `searchTools`, `describeTool`, `describeNamespace` | 发现其他工具。 |
+| `ALL_TOOLS`、`await searchTools(…)`、`await describeTool(…)`、`await describeNamespace(…)` | 发现其他工具（后三个为异步）。 |
 | `models` | 列举与运行 classifier 和 image 模型。 |
 
 ### Pragma 字段
@@ -135,12 +135,12 @@ pi packages add pi-codemode-snippets
 | Field | Required | Default | Meaning |
 |---|---|---|---|
 | `description` | **yes** | — | 面向模型的描述。无此字段的文件会被跳过。 |
-| `name` | no | 文件名 stem | 工具名。需匹配 `[A-Za-z_][A-Za-z0-9_-]{0,63}`。`codemode` 与 `mcp__…` 为保留名。 |
+| `name` | no | 文件名 stem | 工具名。需匹配 `[A-Za-z_][A-Za-z0-9_-]{0,63}`。`codemode`、`tool_search`、`mcp__…` 与 MCP 资源工具名为保留名。 |
 | `label` | no | `name` | UI 标签。 |
 | `input` | no | `{"type":"object","properties":{}}` | 参数对象的 JSON Schema。 |
 | `enabled` | no | `true` | `false` 保留文件但不注册工具。 |
-| `timeoutMs` | no | unset | 合并到生成的 `@options.timeout_ms`。 |
-| `maxOutputTokens` | no | unset | 合并到生成的 `@options.max_output_tokens`。 |
+| `timeoutMs` | no | unset | 合并到生成的 `@options.timeout_ms`。正整数（毫秒），不超过 2147483647。 |
+| `maxOutputTokens` | no | unset | 合并到生成的 `@options.max_output_tokens`。正整数。 |
 | `annotations` | no | unset | `readOnlyHint`、`destructiveHint`、`idempotentHint`、`openWorldHint`。 |
 | `promptGuidelines` | no | unset | 与工具一起展示的额外指南要点。 |
 
@@ -161,7 +161,12 @@ pi packages add pi-codemode-snippets
 ### Options
 
 正文也可以以 pi 自己的 options 行开头。本扩展会把它和 pragma 的限制合并，
-并重新输出一条 options 行。正文优先。
+并重新输出一条 options 行。正文优先。只接受 pi 自己的字段——
+`max_output_tokens`（非负整数）和 `timeout_ms`（正整数，不超过 2147483647）——
+其他字段在加载时就会被拒绝，因为 pi 1.2.0+ 会在脚本执行前对不支持的字段直接报错。
+该行还必须是正文的**第一行**：pi 会对不在首行的 `// @options:` 行直接报错，
+而本扩展总会在正文前插入 `const input = …`，
+所以正文其他位置的 `// @options:` 行永远无法生效——加载器会直接拒绝此类文件。
 
 ```js
 // @snippet: {"description":"…","timeoutMs":10000}
@@ -181,8 +186,10 @@ const out = await tools.bash({ command: "git log --oneline -20" });
 在 setting 目录中，靠后的条目覆盖靠前的条目。 losers 会被 `/snippet list` 所报告。
 
 若名字已被其他工具占用（内置工具如 `bash`、`read`，或其他扩展的工具），
-代码段在注册时被跳过，冲突由 `/snippet validate` 报告。另有两个名字在加载阶段
-就被直接拒绝：`codemode`（会遮盖代码段赖以运行的工具）与 `mcp__…`
+代码段在注册时被跳过，冲突由 `/snippet validate` 报告。另有几个名字在加载阶段
+就被直接拒绝：`codemode`（会遮盖代码段赖以运行的工具）、`tool_search`
+（会遮盖延迟工具加载器）、`mcp__…` 与 MCP 资源工具名
+（`list_mcp_resources`、`list_mcp_resource_templates`、`read_mcp_resource`）
 （MCP 工具在代码段之后才注册，运行时检查看不到它们）。
 
 ## 命令
@@ -329,7 +336,7 @@ node skills/snippet-authoring/scripts/check.mjs <file.js   # 或一个目录
 
 仅 `description`（面向模型）与可选的 `input` JSON Schema。
 省略 `name` 时默认为文件名 stem（需匹配 `[A-Za-z_][A-Za-z0-9_-]{0,63}`）。
-`codemode` 与 `mcp__…` 为保留名；已被其他工具占用的名字会被跳过并由
+`codemode`、`tool_search`、`mcp__…` 与 MCP 资源工具名为保留名；已被其他工具占用的名字会被跳过并由
 `/snippet validate` 报告。缺少 `description` 的文件会被跳过，而不是报错。
 
 ## Built on pi
@@ -344,7 +351,7 @@ node skills/snippet-authoring/scripts/check.mjs <file.js   # 或一个目录
 
 ```bash
 pnpm install
-pnpm test        # 99 个单元测试
+pnpm test        # 142 个单元测试
 pnpm typecheck
 pi -e .          # 把本 checkouts 作为扩展加载，用于单次会话
 ```

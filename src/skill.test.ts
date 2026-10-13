@@ -164,11 +164,14 @@ describe("check.mjs — broken @snippet configuration", () => {
 		expect(result.output).toContain('"my.snippet"');
 	});
 
-	it.each(["codemode.js", "mcp__github__search.js"])("rejects the reserved file name %s", (file) => {
-		const result = checkSource(file, `${validPragma}\nreturn 1;\n`);
-		expect(result.status).toBe(1);
-		expect(result.output).toContain("is reserved");
-	});
+	it.each(["codemode.js", "tool_search.js", "mcp__github__search.js", "read_mcp_resource.js"])(
+		"rejects the reserved file name %s",
+		(file) => {
+			const result = checkSource(file, `${validPragma}\nreturn 1;\n`);
+			expect(result.status).toBe(1);
+			expect(result.output).toContain("is reserved");
+		},
+	);
 
 	it("agrees with the real loader on reserved names", () => {
 		const source = `// @snippet: {"description":"x","name":"codemode"}\nreturn 1;\n`;
@@ -188,6 +191,16 @@ describe("check.mjs — broken @snippet configuration", () => {
 		const result = checkSource("badopt.js", `// @snippet: {"description":"x"}\n// @options: {oops}\nreturn 1;\n`);
 		expect(result.status).toBe(1);
 		expect(result.output).toContain("@options:");
+	});
+
+	it("rejects a stray body @options line, agreeing with the loader", () => {
+		const source = `// @snippet: {"description":"x"}\nconst a = 1;\n// @options: {"timeout_ms": 1000}\nreturn a;\n`;
+		const built = buildSnippet({ source, path: "/tmp/stray.js", scope: "user" });
+		expect(built.ok).toBe(false);
+		if (built.ok) return;
+		const result = checkSource("stray.js", source);
+		expect(result.status).toBe(1);
+		expect(result.output).toContain(built.message);
 	});
 });
 

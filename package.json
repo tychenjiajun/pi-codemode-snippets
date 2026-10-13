@@ -1,6 +1,6 @@
 {
   "name": "pi-codemode-snippets",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "description": "Pi extension that turns user-authored `.js` codemode snippets (a `// @snippet:` pragma plus a sandbox script) into first-class pi tools the model, other tools, and codemode scripts can call.",
   "main": "src/index.ts",
@@ -80,7 +80,7 @@
     "@earendil-works/pi-coding-agent": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.99.2",
+    "@earendil-works/pi-coding-agent": "^1.2.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"
   },

@@ -52,11 +52,14 @@ output handling), and running snippets as Node modules (abandons the sandbox).
 
 ## 5. Registration: plain tools, named by the snippet name
 
-Each snippet is registered with `pi.registerTool()` and the default `direct`
-exposure, so it is declared to the model and callable from scripts and
-`executeTool` while active. No exposure knobs, no gateway tool, no namespace.
+Each snippet is registered with `pi.registerTool()` and an explicit `direct`
+exposure (pi 1.2.0's default), so it is declared to the model and callable from
+scripts and `executeTool` while active. No exposure knobs, no gateway tool, no
+namespace.
 Input binding is `input`; nesting is capped at 10 via the `<id>/<n>` tool-call
-id segments.
+id segments. Each tool declares `reachesTools` (pi 1.2.0) from its generated
+script — "all" when the body uses a discovery global, else the script's
+words — so the MCP extension waits for the servers a call may name.
 
 ## 6. Storage: conventional directories with project precedence
 
