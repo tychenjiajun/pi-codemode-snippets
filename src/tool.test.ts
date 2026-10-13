@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ExtensionToolContext } from "@earendil-works/pi-coding-agent";
 
 import type { CodemodeExecutor } from "./codemode.ts";
-import { createSnippetTool, promptSnippetFromDescription } from "./tool.ts";
+import { createSnippetTool, promptSnippetFromDescription, snippetReach } from "./tool.ts";
 import type { Snippet } from "./types.ts";
 
 function snippet(overrides: Partial<Snippet> = {}): Snippet {
@@ -63,8 +63,10 @@ describe("createSnippetTool", () => {
 		expect(tool.description).toBe("Demo snippet. More.");
 		expect(tool.promptSnippet).toBe("Demo snippet.");
 		expect(tool.parameters).toEqual({ type: "object", properties: { a: { type: "string" } } });
+		expect(tool.exposure).toBe("direct");
 		expect(tool.annotations).toEqual({ readOnlyHint: true });
 		expect(tool.promptGuidelines).toEqual(["Rule one."]);
+		expect(typeof tool.reachesTools).toBe("function");
 	});
 
 	it("runs the snippet when executed", async () => {
@@ -72,5 +74,25 @@ describe("createSnippetTool", () => {
 		const result = await tool.execute("call_1", { a: 1 }, undefined, undefined, CTX);
 		expect(result.content).toEqual([{ type: "text", text: "ok" }]);
 		expect(result.details).toEqual({ snippet: "demo", path: "/user/snippets/demo.js" });
+	});
+});
+
+describe("snippetReach", () => {
+	it("returns the words of a plain body", () => {
+		const reach = snippetReach(snippet({ body: 'const r = await tools.mcp__docs__search({ q: "x" });\nreturn r;' }), {});
+		expect(reach).not.toBe("all");
+		expect(reach).toContain("mcp__docs__search");
+	});
+
+	it("returns \"all\" when the body uses a discovery global", () => {
+		const reach = snippetReach(snippet({ body: "return await searchTools(\"mcp__docs\");" }), {});
+		expect(reach).toBe("all");
+	});
+
+	it("includes input words, so an input-named tool is reachable", () => {
+		const body = "return await tools[input.name]({});";
+		const reach = snippetReach(snippet({ body }), { name: "mcp__docs__search" });
+		expect(reach).not.toBe("all");
+		expect(reach).toContain("mcp__docs__search");
 	});
 });

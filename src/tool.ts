@@ -2,18 +2,38 @@
 // Turning a snippet into a pi tool
 // ---------------------------------------------------------------------------
 //
-// Each enabled snippet becomes one ordinary `pi.registerTool()` tool. The
-// default `direct` exposure is exactly what the design wants: the tool is
-// declared to the model and callable from scripts (and from `ctx.executeTool`)
-// while active.
+// Each enabled snippet becomes one ordinary `pi.registerTool()` tool with an
+// explicit `exposure: "direct"` (pi 1.2.0's default for extension tools): the
+// tool is declared to the model and callable from scripts (and from
+// `ctx.executeTool`) while active. It is set rather than relied on so the
+// contract survives a change of default.
 
 import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
 
+import { buildSnippetCode } from "./codegen.ts";
 import type { CodemodeExecutor } from "./codemode.ts";
 import { runSnippet } from "./execute.ts";
 import type { Snippet } from "./types.ts";
 
 type SnippetToolParameters = ToolDefinition["parameters"];
+
+/**
+ * Script globals that list or look up tools, which the script may then call by
+ * any name — same rule as the built-in codemode tool's `reachesTools`.
+ */
+const DISCOVERY_GLOBALS = /\b(searchTools|describeNamespace|describeTool|ALL_TOOLS)\b/;
+
+/**
+ * The tools a snippet call may reach (`ToolDefinition.reachesTools`, pi 1.2.0):
+ * every tool when the generated script uses a discovery global, else the words
+ * of the generated script, so `tools.mcp__docs__search` and
+ * `tools["mcp__docs__" + name]` both name the `mcp__docs` namespace. The MCP
+ * extension uses it to wait for the servers a call needs before it runs.
+ */
+export function snippetReach(snippet: Snippet, input: Record<string, unknown>): "all" | readonly string[] {
+	const code = buildSnippetCode(snippet, input);
+	return DISCOVERY_GLOBALS.test(code) ? "all" : (code.match(/\w+/g) ?? []);
+}
 
 export interface CreateSnippetToolOptions {
 	/** The captured built-in codemode executor. */
@@ -39,7 +59,9 @@ export function createSnippetTool(snippet: Snippet, options: CreateSnippetToolOp
 		promptSnippet: promptSnippetFromDescription(snippet.description),
 		...(snippet.promptGuidelines ? { promptGuidelines: [...snippet.promptGuidelines] } : {}),
 		parameters: snippet.input as unknown as SnippetToolParameters,
+		exposure: "direct",
 		...(snippet.annotations ? { annotations: { ...snippet.annotations } } : {}),
+		reachesTools: (input) => snippetReach(snippet, input),
 		execute: (toolCallId, params, signal, onUpdate, ctx) =>
 			runSnippet({
 				snippet,
