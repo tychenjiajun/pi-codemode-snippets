@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 //
 // Each enabled snippet becomes one ordinary `pi.registerTool()` tool with an
-// explicit `exposure: "direct"` (pi 1.2.0's default for extension tools): the
+// explicit `exposure: "direct"` (pi's default for extension tools since 1.2.0): the
 // tool is declared to the model and callable from scripts (and from
 // `ctx.executeTool`) while active. It is set rather than relied on so the
 // contract survives a change of default.
@@ -24,7 +24,7 @@ type SnippetToolParameters = ToolDefinition["parameters"];
 const DISCOVERY_GLOBALS = /\b(searchTools|describeNamespace|describeTool|ALL_TOOLS)\b/;
 
 /**
- * The tools a snippet call may reach (`ToolDefinition.reachesTools`, pi 1.2.0):
+ * The tools a snippet call may reach (`ToolDefinition.reachesTools`, since pi 1.2.0):
  * every tool when the generated script uses a discovery global, else the words
  * of the generated script, so `tools.mcp__docs__search` and
  * `tools["mcp__docs__" + name]` both name the `mcp__docs` namespace. The MCP

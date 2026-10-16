@@ -57,7 +57,7 @@ exposure (pi 1.2.0's default), so it is declared to the model and callable from
 scripts and `executeTool` while active. No exposure knobs, no gateway tool, no
 namespace.
 Input binding is `input`; nesting is capped at 10 via the `<id>/<n>` tool-call
-id segments. Each tool declares `reachesTools` (pi 1.2.0) from its generated
+id segments. Each tool declares `reachesTools` (since pi 1.2.0) from its generated
 script — "all" when the body uses a discovery global, else the script's
 words — so the MCP extension waits for the servers a call may name.
 
