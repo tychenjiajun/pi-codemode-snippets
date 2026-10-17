@@ -73,7 +73,7 @@ JavaScript there are no new semantics to learn.
 ## Install
 
 ```bash
-pi packages add pi-codemode-snippets
+pi install npm:pi-codemode-snippets
 ```
 
 The extension needs pi's built-in `codemode` tool, which ships with pi. It
@@ -387,7 +387,7 @@ Without `description` the file is skipped, never errored on.
 
 ## Built on pi
 
-The extension follows pi's [package layout](https://pi.dev/latest/packages): a
+The extension follows pi's [package layout](https://pi.dev/docs/latest/packages): a
 default factory exports `createCodemodeSnippetsExtension(options)`, the
 `pi` manifest in `package.json` registers the extension and the bundled
 `snippet-authoring` skill, and tests run under `vitest`. See pi's

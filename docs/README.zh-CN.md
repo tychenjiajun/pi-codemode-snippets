@@ -60,7 +60,7 @@
 ## 安装
 
 ```bash
-pi packages add pi-codemode-snippets
+pi install npm:pi-codemode-snippets
 ```
 
 本扩展依赖 pi 内置的 `codemode` 工具（随 pi 一起提供）。它会内部捕获该工具的执行器，
@@ -341,7 +341,7 @@ node skills/snippet-authoring/scripts/check.mjs <file.js   # 或一个目录
 
 ## Built on pi
 
-本扩展遵循 pi 的 [package layout](https://pi.dev/latest/packages)：
+本扩展遵循 pi 的 [package layout](https://pi.dev/docs/latest/packages)：
 默认 factory 导出 `createCodemodeSnippetsExtension(options)`，`package.json`
 中的 `pi` 清单注册了扩展与自带的 `snippet-authoring` 技能，测试用 `vitest` 运行。
 详见 pi 的 [Extensions](https://pi.dev/docs/latest/extensions) 与
