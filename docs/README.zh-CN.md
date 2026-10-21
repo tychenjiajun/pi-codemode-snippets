@@ -3,7 +3,7 @@
 [English](../README.md) | 简体中文
 
 <p align="center">
-  <img src="../assets/preview.svg" alt="pi-codemode-snippets 将用户编写的 .js codemode 代码段文件转化为可命名、可组合的 pi 工具，并在 QuickJS 沙箱中运行" width="880">
+  <img src="https://raw.githubusercontent.com/tychenjiajun/pi-codemode-snippets/main/assets/preview.png" alt="pi-codemode-snippets 将用户编写的 .js codemode 代码段文件转化为可命名、可组合的 pi 工具，并在 QuickJS 沙箱中运行" width="880">
 </p>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
@@ -11,6 +11,7 @@
 [![Release](https://img.shields.io/github/v/release/tychenjiajun/pi-codemode-snippets)](https://github.com/tychenjiajun/pi-codemode-snippets/releases/latest)
 [![pi extension](https://img.shields.io/badge/pi-extension-7c3aed.svg)](https://pi.dev/docs/latest/extensions)
 [![pi package](https://img.shields.io/badge/pi-package-7c3aed.svg)](https://pi.dev/docs/latest/packages)
+[![pi.dev/packages](https://img.shields.io/badge/pi.dev-packages-7c3aed.svg)](https://pi.dev/packages/pi-codemode-snippets)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](../tsconfig.json)
 [![Tests](https://img.shields.io/badge/tests-142%20passing-brightgreen.svg)](../package.json)
 [![pnpm](https://img.shields.io/badge/package%20manager-pnpm-f69220.svg)](https://pnpm.io)
@@ -27,6 +28,13 @@
 > **一句话概括：** 一条 `// @snippet:` 注解 + 一条 `.js` 文件的约定，就能把磁盘上的
 > 任意 codemode 脚本注册为命名工具 — 拥有 JSON Schema 输入校验、QuickJS 沙箱、
 > 嵌套调用权限管控、用量记账和跨代码段组合能力 —— 而无需发明新语言或新运行时。
+
+**实际用法：** 写一个带 `// @snippet:` 注解的 `.js` 文件，`/reload` 将它注册为
+具名工具，模型就能像调用普通工具一样调用它 —— 随处可用
+`pi install npm:pi-codemode-snippets` 安装。可在
+[pi 包画廊](https://pi.dev/packages/pi-codemode-snippets) 查看本包。
+
+![前后对比：磁盘上的代码段文件、/snippet list 注册它、模型把它当工具调用、最后安装本包](https://raw.githubusercontent.com/tychenjiajun/pi-codemode-snippets/main/assets/demo.gif)
 
 ## 为什么需要代码段
 
@@ -299,7 +307,7 @@ node skills/snippet-authoring/scripts/check.mjs <file.js   # 或一个目录
 `pi-codemode-guard` *修补*模型编写的 codemode（在 `tool_call` 事件发生时）。
 `pi-codemode-snippets` *注册*用户编写的 codemode 文件为命名工具，
 并且故意不修改代码段正文 —— 它的正文本身就是规范的 JavaScript（见
-[design note on guard integration](../DESIGN.md)）。二者协同：
+[design note on guard integration](https://github.com/tychenjiajun/pi-codemode-snippets/blob/main/DESIGN.md)）。二者协同：
 手动编写代码段，用 guard 清洗模型当场吐出来的脚本。
 
 **代码段安全吗？**

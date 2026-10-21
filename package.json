@@ -21,6 +21,7 @@
   "keywords": [
     "pi-package",
     "pi-extension",
+    "pi-skill",
     "codemode",
     "snippets",
     "tools",
@@ -45,7 +46,7 @@
   ],
   "author": "Jiajun Chen <tychenjiajun@live.cn>",
   "license": "MIT",
-  "homepage": "https://github.com/tychenjiajun/pi-codemode-snippets#readme",
+  "homepage": "https://pi.dev/packages/pi-codemode-snippets",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tychenjiajun/pi-codemode-snippets.git"
@@ -68,7 +69,8 @@
     "extensions": [
       "./src/index.ts"
     ],
-    "image": "./assets/preview.svg",
+    "image": "https://raw.githubusercontent.com/tychenjiajun/pi-codemode-snippets/main/assets/preview.png",
+    "video": "https://raw.githubusercontent.com/tychenjiajun/pi-codemode-snippets/main/assets/demo.mp4",
     "skills": [
       "./skills"
     ]

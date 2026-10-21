@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" role="img" aria-label="reload registers the snippet — demo frame 2">
+  <defs>
+    <linearGradient id="frameAccent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="800" fill="#0d0d12"/>
+
+  <!-- label chip -->
+  <rect x="48" y="40" rx="8" width="470" height="52" fill="#7c3aed" fill-opacity="0.18" stroke="#7c3aed"/>
+  <text x="283" y="76" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="28" fill="#c4b5fd">2 · /reload registers it</text>
+
+  <!-- terminal window -->
+  <rect x="48" y="128" rx="16" width="1184" height="624" fill="#101017" stroke="#26262f" stroke-width="2"/>
+  <rect x="48" y="128" rx="16" width="1184" height="64" fill="#16161d"/>
+  <circle cx="92" cy="160" r="10" fill="#ff5f57"/>
+  <circle cx="124" cy="160" r="10" fill="#febc2e"/>
+  <circle cx="156" cy="160" r="10" fill="#28c840"/>
+  <text x="640" y="170" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="26" fill="#8b8b9e">pi › /snippet list</text>
+
+  <!-- code lines -->
+  <text x="96" y="264" font-family="ui-monospace, Menlo, monospace" font-size="32" fill="#e6e6ef" xml:space="preserve">
+    <tspan x="96" dy="0" fill="#7ee787">Snippets: 1 registered, 0 problems.</tspan>
+    <tspan x="96" dy="1.4em"> </tspan>
+    <tspan x="96" dy="1.4em" fill="#8b8b9e">Registered (1):</tspan>
+    <tspan x="96" dy="1.4em" fill="#7ee787">  ✓ list_open_prs  user</tspan>
+    <tspan x="96" dy="1.4em" fill="#82aaff">    ~/.pi/agent/snippets/list_open_prs.js</tspan>
+    <tspan x="96" dy="1.4em" fill="#7c3aed">  → registered as a pi tool with JSON Schema input</tspan>
+  </text>
+
+  <!-- caption -->
+  <text x="96" y="700" font-family="ui-monospace, Menlo, monospace" font-size="26" fill="#5c5775">/reload scans .pi/snippets/ and ~/.pi/agent/snippets/</text>
+</svg>

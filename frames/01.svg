@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" role="img" aria-label="write the snippet — demo frame 1">
+  <defs>
+    <linearGradient id="frameAccent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="800" fill="#0d0d12"/>
+
+  <!-- label chip -->
+  <rect x="48" y="40" rx="8" width="470" height="52" fill="#7c3aed" fill-opacity="0.18" stroke="#7c3aed"/>
+  <text x="283" y="76" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="28" fill="#c4b5fd">1 · write the snippet</text>
+
+  <!-- terminal window -->
+  <rect x="48" y="128" rx="16" width="1184" height="624" fill="#101017" stroke="#26262f" stroke-width="2"/>
+  <rect x="48" y="128" rx="16" width="1184" height="64" fill="#16161d"/>
+  <circle cx="92" cy="160" r="10" fill="#ff5f57"/>
+  <circle cx="124" cy="160" r="10" fill="#febc2e"/>
+  <circle cx="156" cy="160" r="10" fill="#28c840"/>
+  <text x="640" y="170" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="26" fill="#8b8b9e">~/.pi/agent/snippets/list_open_prs.js</text>
+
+  <!-- code lines -->
+  <text x="96" y="264" font-family="ui-monospace, Menlo, monospace" font-size="32" fill="#e6e6ef" xml:space="preserve">
+    <tspan x="96" dy="0" fill="#6b7391">// </tspan><tspan fill="#c792ea" font-weight="700">@snippet:</tspan><tspan fill="#8b849c"> {</tspan>
+    <tspan x="96" dy="1.4em" fill="#6b7391">//   </tspan><tspan fill="#79c0ff">"description"</tspan><tspan fill="#8b849c">: </tspan><tspan fill="#7ee787">"List open PRs."</tspan><tspan fill="#8b849c">,</tspan>
+    <tspan x="96" dy="1.4em" fill="#6b7391">//   </tspan><tspan fill="#79c0ff">"input"</tspan><tspan fill="#8b849c">: { </tspan><tspan fill="#79c0ff">"repo"</tspan><tspan fill="#8b849c">: </tspan><tspan fill="#7ee787">"string"</tspan><tspan fill="#8b849c"> } }</tspan>
+    <tspan x="96" dy="1.4em" fill="#c792ea">const</tspan><tspan fill="#e6e6ef"> r = </tspan><tspan fill="#c792ea">await</tspan><tspan fill="#e6e6ef"> tools.</tspan><tspan fill="#82aaff">bash</tspan><tspan fill="#8b849c">({ command:</tspan>
+    <tspan x="96" dy="1.4em" fill="#7ee787">  `gh pr list -R ${input.repo}`</tspan><tspan fill="#8b849c"> });</tspan>
+    <tspan x="96" dy="1.4em" fill="#c792ea">return</tspan><tspan fill="#e6e6ef"> JSON.</tspan><tspan fill="#82aaff">parse</tspan><tspan fill="#8b849c">(r.output);</tspan>
+  </text>
+
+  <!-- caption -->
+  <text x="96" y="700" font-family="ui-monospace, Menlo, monospace" font-size="26" fill="#5c5775">a codemode script you wrote — plain .js, reviewed like any code</text>
+</svg>

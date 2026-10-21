@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+  <title>pi-codemode-snippets — user-authored .js codemode snippets become named, composable pi tools</title>
+  <desc>A pi extension: one // @snippet: pragma turns a codemode script into a named pi tool with JSON Schema input, QuickJS sandboxing, and cross-snippet composition.</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0c0b14"/>
+      <stop offset="0.55" stop-color="#110f1d"/>
+      <stop offset="1" stop-color="#0d0c17"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#7c3aed" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#0ea5e9" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#0ea5e9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b1538"/>
+      <stop offset="1" stop-color="#151129"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.03"/>
+    </linearGradient>
+    <pattern id="dots" width="26" height="26" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r="1.5" fill="#ffffff" opacity="0.05"/>
+    </pattern>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#a78bfa"/>
+    </marker>
+    <style>
+      .code { font-family: ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace; font-size: 15.5px; }
+      .kw   { fill: #c792ea; }
+      .fn   { fill: #82aaff; }
+      .str  { fill: #7ee787; }
+      .num  { fill: #f2cc60; }
+      .pun  { fill: #8b849c; }
+      .pl   { fill: #e6e1f5; }
+      .cm   { fill: #6b7391; }
+      .key  { fill: #79c0ff; }
+    </style>
+  </defs>
+
+  <!-- background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <ellipse cx="1060" cy="40" rx="460" ry="320" fill="url(#glowA)"/>
+  <ellipse cx="120" cy="600" rx="420" ry="300" fill="url(#glowB)"/>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+
+  <!-- header -->
+  <rect x="60" y="44" width="146" height="32" rx="16" fill="#7c3aed" fill-opacity="0.14" stroke="#7c3aed" stroke-opacity="0.7"/>
+  <text x="133" y="65" font-size="14" font-weight="700" fill="#c4b5fd" text-anchor="middle" letter-spacing="0.5">pi extension</text>
+  <text x="1140" y="65" font-size="14" font-weight="600" fill="#6f6a85" text-anchor="end" letter-spacing="0.5">MIT · TypeScript strict · 142 tests</text>
+
+  <!-- title -->
+  <text x="60" y="140" font-size="46" font-weight="800" fill="#f6f4ff" letter-spacing="-0.5">pi-codemode-snippets</text>
+  <text x="61" y="178" font-size="19" fill="#9a94b3">One <tspan fill="#a78bfa" font-weight="600">// @snippet:</tspan> pragma turns a codemode .js file into a named, composable pi tool</text>
+
+  <!-- left: code window -->
+  <g filter="url(#soft)">
+    <rect x="60" y="215" width="640" height="250" rx="16" fill="#0f0e18" stroke="#2b2745" stroke-width="1.5"/>
+  </g>
+  <path d="M60,231 a16,16 0 0 1 16,-16 h608 a16,16 0 0 1 16,16 v24 h-640 z" fill="#1a1828"/>
+  <line x1="60" y1="255" x2="700" y2="255" stroke="#2b2745" stroke-width="1.5"/>
+  <circle cx="86" cy="235" r="5.5" fill="#ff5f57"/>
+  <circle cx="106" cy="235" r="5.5" fill="#febc2e"/>
+  <circle cx="126" cy="235" r="5.5" fill="#28c840"/>
+  <text x="150" y="240" class="code" font-size="13.5" fill="#6f6a85">~/.pi/agent/snippets/list_open_prs.js</text>
+
+  <text x="86" y="288" class="code" xml:space="preserve"><tspan class="cm">// </tspan><tspan class="kw" font-weight="700">@snippet:</tspan><tspan class="pun"> {</tspan></text>
+  <text x="86" y="314" class="code" xml:space="preserve"><tspan class="cm">//   </tspan><tspan class="key">"description"</tspan><tspan class="pun">: </tspan><tspan class="str">"List open pull requests for a repo."</tspan><tspan class="pun">,</tspan></text>
+  <text x="86" y="340" class="code" xml:space="preserve"><tspan class="cm">//   </tspan><tspan class="key">"input"</tspan><tspan class="pun">: { </tspan><tspan class="key">"repo"</tspan><tspan class="pun">: </tspan><tspan class="str">"string"</tspan><tspan class="pun">, </tspan><tspan class="key">"limit"</tspan><tspan class="pun">: </tspan><tspan class="str">"integer"</tspan><tspan class="pun"> } }</tspan></text>
+  <text x="86" y="366" class="code" xml:space="preserve"><tspan class="kw">const</tspan><tspan class="pl"> limit = input.limit ?? </tspan><tspan class="num">20</tspan><tspan class="pun">;</tspan></text>
+  <text x="86" y="392" class="code" xml:space="preserve"><tspan class="kw">const</tspan><tspan class="pl"> r = </tspan><tspan class="kw">await</tspan><tspan class="pl"> tools.</tspan><tspan class="fn">bash</tspan><tspan class="pun">({ command:</tspan></text>
+  <text x="105" y="418" class="code" xml:space="preserve"><tspan class="str">`gh pr list -R ${input.repo} --limit ${limit}`</tspan><tspan class="pun"> });</tspan></text>
+  <text x="86" y="444" class="code" xml:space="preserve"><tspan class="kw">return</tspan><tspan class="pl"> JSON.</tspan><tspan class="fn">parse</tspan><tspan class="pun">(r.output);</tspan></text>
+
+  <!-- arrow -->
+  <circle cx="730" cy="340" r="34" fill="url(#glowA)"/>
+  <line x1="712" y1="340" x2="748" y2="340" stroke="#a78bfa" stroke-width="3" stroke-linecap="round" marker-end="url(#arr)"/>
+
+  <!-- right: registered tool card -->
+  <g filter="url(#soft)">
+    <rect x="760" y="215" width="380" height="250" rx="16" fill="url(#card)" stroke="#4c3f8f" stroke-width="1.5"/>
+  </g>
+  <text x="790" y="248" font-size="12" font-weight="700" fill="#8b7fd8" letter-spacing="2.5">REGISTERED TOOL</text>
+  <text x="790" y="284" font-size="27" font-weight="800" fill="#ffffff">list_open_prs</text>
+  <text x="790" y="314" class="code" font-size="14.5" fill="#7ee787">list_open_prs({ repo, limit })</text>
+  <line x1="790" y1="334" x2="1110" y2="334" stroke="#3b3368" stroke-width="1.5"/>
+  <g font-size="15.5" fill="#cfc8ea">
+    <path d="M792,357 l8,5 l-8,5 z" fill="#a78bfa"/>
+    <text x="812" y="367">the model calls it by name</text>
+    <path d="M792,389 l8,5 l-8,5 z" fill="#a78bfa"/>
+    <text x="812" y="399">other snippets compose it</text>
+    <path d="M792,421 l8,5 l-8,5 z" fill="#a78bfa"/>
+    <text x="812" y="431" class="code" font-size="13.5" fill="#7ee787">repo_stats → list_open_prs → bash</text>
+  </g>
+
+  <!-- feature chips -->
+  <g font-size="14" font-weight="600" fill="#c4b5fd">
+    <rect x="181" y="492" width="152" height="36" rx="18" fill="url(#chip)" stroke="#4c3f8f" stroke-opacity="0.7"/>
+    <text x="257" y="510" text-anchor="middle" dominant-baseline="central">QuickJS sandbox</text>
+    <rect x="347" y="492" width="124" height="36" rx="18" fill="url(#chip)" stroke="#4c3f8f" stroke-opacity="0.7"/>
+    <text x="409" y="510" text-anchor="middle" dominant-baseline="central">JSON Schema</text>
+    <rect x="485" y="492" width="110" height="36" rx="18" fill="url(#chip)" stroke="#4c3f8f" stroke-opacity="0.7"/>
+    <text x="540" y="510" text-anchor="middle" dominant-baseline="central">sandboxed</text>
+    <rect x="609" y="492" width="126" height="36" rx="18" fill="url(#chip)" stroke="#4c3f8f" stroke-opacity="0.7"/>
+    <text x="672" y="510" text-anchor="middle" dominant-baseline="central">composition</text>
+    <rect x="749" y="492" width="116" height="36" rx="18" fill="url(#chip)" stroke="#4c3f8f" stroke-opacity="0.7"/>
+    <text x="807" y="510" text-anchor="middle" dominant-baseline="central">idempotent</text>
+    <rect x="879" y="492" width="140" height="36" rx="18" fill="url(#chip)" stroke="#4c3f8f" stroke-opacity="0.7"/>
+    <text x="949" y="510" text-anchor="middle" dominant-baseline="central">recursion cap</text>
+  </g>
+
+  <!-- footer -->
+  <text x="600" y="570" font-size="17" fill="#7b7594" text-anchor="middle">snippet body = unchanged codemode script — runs in the same QuickJS sandbox as a model-written one</text>
+  <text x="600" y="598" font-size="14" fill="#5c5775" text-anchor="middle">github.com/tychenjiajun/pi-codemode-snippets</text>
+</svg>

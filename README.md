@@ -3,7 +3,7 @@
 English | [简体中文](./docs/README.zh-CN.md)
 
 <p align="center">
-  <img src="./assets/preview.svg" alt="pi-codemode-snippets turns a user-authored .js codemode snippet file into a named, composable pi tool that runs in the QuickJS sandbox" width="880">
+  <img src="https://raw.githubusercontent.com/tychenjiajun/pi-codemode-snippets/main/assets/preview.png" alt="pi-codemode-snippets turns a user-authored .js codemode snippet file into a named, composable pi tool that runs in the QuickJS sandbox" width="880">
 </p>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
@@ -11,6 +11,7 @@ English | [简体中文](./docs/README.zh-CN.md)
 [![Release](https://img.shields.io/github/v/release/tychenjiajun/pi-codemode-snippets)](https://github.com/tychenjiajun/pi-codemode-snippets/releases/latest)
 [![pi extension](https://img.shields.io/badge/pi-extension-7c3aed.svg)](https://pi.dev/docs/latest/extensions)
 [![pi package](https://img.shields.io/badge/pi-package-7c3aed.svg)](https://pi.dev/docs/latest/packages)
+[![pi.dev/packages](https://img.shields.io/badge/pi.dev-packages-7c3aed.svg)](https://pi.dev/packages/pi-codemode-snippets)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6.svg)](./tsconfig.json)
 [![Tests](https://img.shields.io/badge/tests-142%20passing-brightgreen.svg)](./package.json)
 [![pnpm](https://img.shields.io/badge/package%20manager-pnpm-f69220.svg)](https://pnpm.io)
@@ -31,6 +32,13 @@ library of the scripts that proved useful.
 > Schema input, QuickJS sandboxing, nested-call permissions, usage accounting,
 > and cross-snippet composition — without inventing a new language or a new
 > runtime.
+
+**In practice:** you write a `.js` file with a `// @snippet:` pragma,
+`/reload` registers it as a named tool, and the model calls it like any other
+tool — then install it anywhere with `pi install npm:pi-codemode-snippets`.
+See it on the [pi package gallery](https://pi.dev/packages/pi-codemode-snippets).
+
+![Before and after: a snippet file on disk, /snippet list registering it, the model calling it as a tool, then installing the package](https://raw.githubusercontent.com/tychenjiajun/pi-codemode-snippets/main/assets/demo.gif)
 
 ## Why snippets exist
 
@@ -339,7 +347,7 @@ errors (with the offending file line) and redeclarations of the reserved
 `pi-codemode-guard` *repairs* LLM-written codemode at the `tool_call` event.
 `pi-codemode-snippets` *registers* user-authored codemode files as named tools,
 and intentionally does not touch a snippet body — its body is already canonical
-JavaScript (see the [design note on guard integration](./DESIGN.md)). They
+JavaScript (see the [design note on guard integration](https://github.com/tychenjiajun/pi-codemode-snippets/blob/main/DESIGN.md)). They
 compose: write snippets by hand, and let the guard clean up anything the model
 emits inline.
 
