@@ -1,6 +1,6 @@
 {
   "name": "pi-codemode-snippets",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "description": "Pi extension that turns user-authored `.js` codemode snippets (a `// @snippet:` pragma plus a sandbox script) into first-class pi tools the model, other tools, and codemode scripts can call.",
   "main": "src/index.ts",
